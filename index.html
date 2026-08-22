@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Калькулятор стеклянных лестничных ограждений</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Ограждения из стекла</h1>
+    <button class="btn b-dark" onclick="saveAll()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+      Сохранить
+    </button>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="head">
+      <h2><span class="n">1</span>Тип стекла</h2>
+      <button class="btn ghost" onclick="openModal('glassModal')">Настройки</button>
+    </div>
+    <label>Выберите стекло</label>
+    <select id="glass" onchange="calc()"></select>
+    <div class="hint" id="glassHint"></div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <div class="head"><h2><span class="n">2</span>Расчёт стекла</h2></div>
+    <div class="sub">
+      <b>Фигуры (трапеции)</b>
+      <div class="grid" style="margin-top:8px">
+        <div><label>Площадь, м²</label><input type="number" id="trapArea" placeholder="0" min="0" step="0.01" oninput="calc()"></div>
+        <div><label>Цена, ₽/м²</label><input type="number" id="trapPrice" readonly></div>
+      </div>
+    </div>
+    <div class="sub">
+      <b>Прямоугольники</b>
+      <div class="grid" style="margin-top:8px">
+        <div><label>Площадь, м²</label><input type="number" id="rectArea" placeholder="0" min="0" step="0.01" oninput="calc()"></div>
+        <div><label>Цена, ₽/м²</label><input type="number" id="rectPrice" readonly></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card">
+    <div class="head">
+      <h2><span class="n">3</span>Фурнитура</h2>
+      <button class="btn ghost" onclick="openModal('hardModal')">Настройки</button>
+    </div>
+    <div id="hardList"></div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="card">
+    <div class="head">
+      <h2><span class="n">4</span>Поручень</h2>
+      <button class="btn ghost" onclick="openModal('railModal')">Настройки</button>
+    </div>
+    <label>Тип поручня</label>
+    <select id="railSelect" onchange="calc()"></select>
+    <div class="grid" style="margin-top:10px">
+      <div><label>Длина, м.пог</label><input type="number" id="railLength" placeholder="—" min="0" step="0.1" oninput="calc()"></div>
+      <div><label>Сумма вручную, ₽</label><input type="number" id="railManual" placeholder="авто" min="0" step="100" oninput="calc()"></div>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="card">
+    <div class="head">
+      <h2><span class="n">5</span>Доставка и разгрузка</h2>
+      <button class="btn ghost" onclick="openModal('deliveryModal')">Настройки</button>
+    </div>
+    <label class="switch-wrap">
+      <div class="switch">
+        <input type="checkbox" id="delOn" checked onchange="calc()">
+        <span class="slider"></span>
+      </div>
+      <span>Включить в расчёт</span>
+    </label>
+    <div style="max-width:220px"><label>Стоимость, ₽</label><input type="number" id="delPrice" min="0" step="100" oninput="calc()"></div>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="card">
+    <div class="head">
+      <h2><span class="n">6</span>Монтажные работы</h2>
+      <button class="btn ghost" onclick="openModal('installModal')">Настройки</button>
+    </div>
+    <label class="switch-wrap">
+      <div class="switch">
+        <input type="checkbox" id="instOn" checked onchange="calc()">
+        <span class="slider"></span>
+      </div>
+      <span>Включить в расчёт</span>
+    </label>
+    <div class="grid">
+      <div>
+        <label>Способ расчёта</label>
+        <select id="instMode" onchange="calc()">
+          <option value="fix">Фиксированная сумма, ₽</option>
+          <option value="pct">Процент от пунктов 1–4</option>
+        </select>
+      </div>
+      <div id="instFixWrap"><label>Сумма, ₽</label><input type="number" id="instFix" min="0" step="500" oninput="calc()"></div>
+      <div id="instPctWrap" style="display:none"><label>Процент, %</label><input type="number" id="instPct" min="0" step="1" oninput="calc()"></div>
+    </div>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="card">
+    <div class="head">
+      <h2><span class="n">7</span>Дополнительные услуги</h2>
+      <button class="btn ghost" onclick="openModal('serviceModal')">Настройки</button>
+    </div>
+    <div id="serviceList"></div>
+  </div>
+
+  <!-- Step 8 -->
+  <div class="card">
+    <div class="head">
+      <h2><span class="n">8</span>Срок изготовления</h2>
+      <button class="btn ghost" onclick="openModal('termModal')">Настройки</button>
+    </div>
+    <div class="grid">
+      <div><label>Рабочих дней</label><input type="number" id="termDays" min="1" step="1" oninput="termManual=true; calc();"></div>
+      <div style="display:flex;align-items:end"><button class="btn b-gray" style="width:100%" onclick="termManual=false; calc();">Авто по типу стекла</button></div>
+    </div>
+    <div class="hint" id="termHint"></div>
+  </div>
+
+  <!-- Total Summary Card -->
+  <div class="total">
+    <div class="total-top">
+      <div>
+        <h2>Коммерческое предложение</h2>
+        <span class="sum-badge">Округлено до 500 ₽</span>
+      </div>
+      <button class="btn b-teal" onclick="copyQuote()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        Скопировать
+      </button>
+    </div>
+    <div class="sum" id="sum">0 ₽</div>
+    <div id="quoteText"></div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal" id="glassModal"><div class="mbox">
+  <span class="close" onclick="closeModal('glassModal')">&times;</span>
+  <h3>Типы стекла</h3>
+  <div id="eGlass"></div>
+  <div class="actions">
+    <input type="text" id="ngName" placeholder="Название">
+    <input type="number" id="ngTrap" placeholder="Трапеция ₽/м²">
+    <input type="number" id="ngRect" placeholder="Прямоуг. ₽/м²">
+    <button class="btn b-blue" onclick="addGlass()">Добавить</button>
+  </div>
+</div></div>
+
+<div class="modal" id="hardModal"><div class="mbox">
+  <span class="close" onclick="closeModal('hardModal')">&times;</span>
+  <h3>Фурнитура</h3>
+  <div id="eHard"></div>
+  <div class="actions">
+    <input type="text" id="nhName" placeholder="Название">
+    <input type="number" id="nhPrice" placeholder="Цена">
+    <select id="nhUnit"><option value="шт">шт</option><option value="м.пог">м.пог</option></select>
+    <button class="btn b-blue" onclick="addHard()">Добавить</button>
+  </div>
+</div></div>
+
+<div class="modal" id="railModal"><div class="mbox">
+  <span class="close" onclick="closeModal('railModal')">&times;</span>
+  <h3>Поручни</h3>
+  <div id="eRail"></div>
+  <div class="actions">
+    <input type="text" id="nrName" placeholder="Название">
+    <input type="number" id="nrPrice" placeholder="₽/м.пог">
+    <button class="btn b-blue" onclick="addRail()">Добавить</button>
+  </div>
+</div></div>
+
+<div class="modal" id="deliveryModal"><div class="mbox">
+  <span class="close" onclick="closeModal('deliveryModal')">&times;</span>
+  <h3>Доставка</h3>
+  <label>Стоимость по умолчанию, ₽</label>
+  <input type="number" id="deliverySetting" oninput="M.delivery=parseFloat(this.value)||0; applyMisc(); autoSave(); calc();">
+</div></div>
+
+<div class="modal" id="installModal"><div class="mbox">
+  <span class="close" onclick="closeModal('installModal')">&times;</span>
+  <h3>Монтаж</h3>
+  <label>Фиксированная сумма по умолчанию, ₽</label>
+  <input type="number" id="instFixSetting" oninput="M.instFix=parseFloat(this.value)||0; applyMisc(); autoSave(); calc();">
+  <label style="margin-top:10px">Процент от пунктов 1–4 по умолчанию, %</label>
+  <input type="number" id="instPctSetting" oninput="M.instPct=parseFloat(this.value)||0; applyMisc(); autoSave(); calc();">
+</div></div>
+
+<div class="modal" id="serviceModal"><div class="mbox">
+  <span class="close" onclick="closeModal('serviceModal')">&times;</span>
+  <h3>Дополнительные услуги</h3>
+  <div id="eServ"></div>
+  <div class="actions">
+    <input type="text" id="nsName" placeholder="Название">
+    <select id="nsEmpty"><option value="free">бесплатно</option><option value="hide">скрыть</option></select>
+    <button class="btn b-blue" onclick="addService()">Добавить</button>
+  </div>
+</div></div>
+
+<div class="modal" id="termModal"><div class="mbox">
+  <span class="close" onclick="closeModal('termModal')">&times;</span>
+  <h3>Сроки</h3>
+  <label>Обычное стекло, раб. дней</label>
+  <input type="number" id="termGlassSetting" oninput="M.termGlass=parseInt(this.value)||21; applyMisc(); autoSave(); calc();">
+  <label style="margin-top:10px">Триплекс, раб. дней</label>
+  <input type="number" id="termTriplexSetting" oninput="M.termTripl=parseInt(this.value)||25; applyMisc(); autoSave(); calc();">
+</div></div>
+
+<script src="script.js"></script>
+</body>
+</html>
