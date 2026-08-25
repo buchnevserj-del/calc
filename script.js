@@ -34,7 +34,7 @@ const DEF = {
     { name: "Изготовление схемы", emptyDefault: "free" },
     { name: "Порошковая окраска фурнитуры по RAL", emptyDefault: "hide" }
   ],
-  misc: { delivery: 7500, instFix: 35000, instPct: 30, termGlass: 21, termTripl: 25 }
+  misc: { delivery: 7500, instFix: 35000, instPct: 30, termGlass: 21, termTripl: 25, pin: '0120' }
 };
 
 let D = JSON.parse(JSON.stringify(DEF));
@@ -72,6 +72,12 @@ if (!loadFromURL()) {
   } catch(e) {}
 }
 
+if (!D.misc.pin) D.misc.pin = '0120';
+
+const SETTINGS_MODALS = ['glassModal', 'hardModal', 'railModal', 'deliveryModal', 'installModal', 'serviceModal', 'termModal'];
+let isAdminUnlocked = false;
+let pendingModalId = null;
+
 let M = D.misc;
 let termManual = false;
 const el = id => document.getElementById(id);
@@ -83,6 +89,23 @@ const esc = s => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&q
 
 const roundUp500 = n => n > 0 ? Math.ceil(n / 500) * 500 : 0;
 
+function updateGlassSwatch(gName) {
+  const pill = el('glassSwatchPill');
+  const title = el('glassSwatchTitle');
+  if (!pill || !title) return;
+  title.textContent = gName;
+  pill.className = 'glass-preview-pill';
+  if (/crystal|осветл/i.test(gName)) {
+    pill.classList.add('swatch-crystal');
+  } else if (/графит|серое/i.test(gName)) {
+    pill.classList.add('swatch-graphite');
+  } else if (/бронз/i.test(gName)) {
+    pill.classList.add('swatch-bronze');
+  } else {
+    pill.classList.add('swatch-classic');
+  }
+}
+
 function buildGlassSelect() {
   const s = el('glass'), prev = s.value;
   s.innerHTML = '';
@@ -93,12 +116,34 @@ function buildGlassSelect() {
   if ([...s.options].some(o => o.value === prev)) s.value = prev;
 }
 
+function stepHard(idx, delta) {
+  const inp = document.querySelector(`.hardQty[data-idx="${idx}"]`);
+  if (!inp) return;
+  let v = parseFloat(inp.value) || 0;
+  v = Math.max(0, v + delta);
+  inp.value = v > 0 ? v : '';
+  calc();
+}
+
 function buildHardList() {
   el('hardList').innerHTML = D.hard.map((item, idx) => `
     <div class="row3">
       <div class="nm">${item.name}<span class="pt">${fmt(item.price)} ₽/${item.unit}</span></div>
-      <div><label>Кол-во</label><input type="number" class="hardQty" data-idx="${idx}" placeholder="—" min="0" step="any" oninput="calc()"></div>
-      <div><label>Сумма, ₽</label><input type="number" class="hardSum" data-idx="${idx}" placeholder="авто" min="0" step="100" oninput="calc()"></div>
+      <div>
+        <label>Кол-во (${item.unit})</label>
+        <div class="stepper">
+          <button type="button" class="stepper-btn" onclick="stepHard(${idx}, -1)">−</button>
+          <input type="number" class="hardQty" data-idx="${idx}" placeholder="0" min="0" step="any" oninput="calc()">
+          <button type="button" class="stepper-btn" onclick="stepHard(${idx}, 1)">+</button>
+        </div>
+      </div>
+      <div>
+        <label>Сумма, ₽</label>
+        <div class="input-wrap">
+          <input type="number" class="hardSum" data-idx="${idx}" placeholder="авто" min="0" step="100" oninput="calc()">
+          <span class="unit">₽</span>
+        </div>
+      </div>
     </div>`).join('');
 }
 
@@ -116,9 +161,15 @@ function buildRailSelect() {
 
 function buildServiceList() {
   el('serviceList').innerHTML = D.services.map((s, idx) => `
-    <div class="row3" style="grid-template-columns:1fr 130px">
+    <div class="row3" style="grid-template-columns:1fr 140px">
       <div class="nm">${s.name}<span class="pt">${s.emptyDefault === 'free' ? 'пусто → бесплатно' : 'пусто → скрыть'}</span></div>
-      <div><label>Цена, ₽</label><input type="number" class="servPrice" data-idx="${idx}" placeholder="—" min="0" step="100" oninput="calc()"></div>
+      <div>
+        <label>Цена, ₽</label>
+        <div class="input-wrap">
+          <input type="number" class="servPrice" data-idx="${idx}" placeholder="—" min="0" step="100" oninput="calc()">
+          <span class="unit">₽</span>
+        </div>
+      </div>
     </div>`).join('');
 }
 
@@ -137,10 +188,85 @@ function applyMisc() {
 }
 
 function openModal(id) {
+  if (SETTINGS_MODALS.includes(id) && !isAdminUnlocked) {
+    pendingModalId = id;
+    el('pinInput').value = '';
+    el('pinError').style.display = 'none';
+    el('pinModal').classList.add('open');
+    setTimeout(() => el('pinInput').focus(), 100);
+    return;
+  }
   renderSettingsFor(id);
   el(id).classList.add('open');
 }
-function closeModal(id) { el(id).classList.remove('open'); }
+
+function closeModal(id) { 
+  const target = el(id);
+  if (target) target.classList.remove('open'); 
+}
+
+function verifyPin() {
+  const entered = el('pinInput').value.trim();
+  const currentPin = (D.misc && D.misc.pin) ? String(D.misc.pin) : '0120';
+  if (entered === currentPin) {
+    isAdminUnlocked = true;
+    closeModal('pinModal');
+    showToast('Режим администратора активирован 🔓');
+    if (pendingModalId) {
+      const target = pendingModalId;
+      pendingModalId = null;
+      openModal(target);
+    }
+  } else {
+    el('pinError').style.display = 'block';
+    el('pinInput').select();
+  }
+}
+
+function lockAdmin() {
+  isAdminUnlocked = false;
+  SETTINGS_MODALS.forEach(id => closeModal(id));
+  closeModal('changePinModal');
+  showToast('Настройки заблокированы 🔒');
+}
+
+function openChangePinModal() {
+  el('oldPinInput').value = '';
+  el('newPinInput').value = '';
+  el('confirmPinInput').value = '';
+  el('changePinError').style.display = 'none';
+  el('changePinModal').classList.add('open');
+}
+
+function saveNewPin() {
+  const oldPin = el('oldPinInput').value.trim();
+  const newPin = el('newPinInput').value.trim();
+  const confirmPin = el('confirmPinInput').value.trim();
+  const currentPin = (D.misc && D.misc.pin) ? String(D.misc.pin) : '0120';
+  const errEl = el('changePinError');
+
+  if (oldPin !== currentPin) {
+    errEl.textContent = 'Текущий PIN-код введён неверно';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!newPin || newPin.length < 3) {
+    errEl.textContent = 'Новый PIN-код должен содержать от 3 символов';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (newPin !== confirmPin) {
+    errEl.textContent = 'Новые PIN-коды не совпадают';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  D.misc.pin = newPin;
+  autoSave();
+  errEl.style.display = 'none';
+  closeModal('changePinModal');
+  showToast('PIN-код успешно изменён! 🔑');
+}
 
 function renderSettingsFor(id) {
   if (id === 'glassModal') renderGlassSettings();
@@ -283,6 +409,9 @@ function calc() {
   el('trapPrice').value = g.trap;
   el('rectPrice').value = g.rect;
   el('glassHint').textContent = `Трапеции — ${fmt(g.trap)} ₽/м² · Прямоугольники — ${fmt(g.rect)} ₽/м²`;
+  
+  updateGlassSwatch(gName);
+
   const trapA = val('trapArea') || 0;
   const rectA = val('rectArea') || 0;
   
@@ -378,6 +507,8 @@ function calc() {
   const total = glassSum + hardwareTotal + delSum + instSum + servSum;
 
   el('sum').textContent = rub(total);
+  const floatEl = el('floatingSum');
+  if (floatEl) floatEl.textContent = rub(total);
 
   if (!termManual) el('termDays').value = /триплекс/i.test(gName) ? M.termTripl : M.termGlass;
   el('termHint').textContent = termManual
@@ -430,11 +561,309 @@ function copyQuote() {
   }
 }
 
-// Функция генерации ссылки с вашими ценами
-function copyShareLink() {
+function getShareConfigUrl() {
   const jsonStr = JSON.stringify(pack());
   const encoded = btoa(String.fromCharCode(...new TextEncoder().encode(jsonStr)));
-  const url = window.location.origin + window.location.pathname + '#cfg=' + encoded;
+  return window.location.origin + window.location.pathname + '#cfg=' + encoded;
+}
+
+async function openShareHub() {
+  const text = el('quoteText').textContent;
+  const sum = el('sum').textContent;
+  const url = getShareConfigUrl();
+
+  // На мобильных устройствах сначала пробуем нативное системное меню "Поделиться"
+  if (navigator.share && /mobile|android|iphone|ipad|ipod/i.test(navigator.userAgent)) {
+    try {
+      await navigator.share({
+        title: `GlassLoft — Расчёт ограждения (${sum})`,
+        text: text,
+        url: url
+      });
+      return;
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        openModal('shareModal');
+      }
+      return;
+    }
+  }
+
+  // На ПК и других устройствах открываем стильный Share Hub с мессенджерами
+  openModal('shareModal');
+}
+
+function shareTo(platform) {
+  const text = el('quoteText').textContent;
+  const url = getShareConfigUrl();
+  let shareUrl = '';
+
+  if (platform === 'telegram') {
+    shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+  } else if (platform === 'whatsapp') {
+    shareUrl = `https://wa.me/?text=${encodeURIComponent(text + '\n\nСсылка на конфигурацию: ' + url)}`;
+  } else if (platform === 'email') {
+    shareUrl = `mailto:?subject=${encodeURIComponent('Коммерческое предложение по стеклянным ограждениям (GlassLoft)')}&body=${encodeURIComponent(text + '\n\nСсылка на расчёт: ' + url)}`;
+  } else if (platform === 'vk') {
+    shareUrl = `https://vk.com/share.php?url=${encodeURIComponent(url)}&title=${encodeURIComponent('Расчёт стеклянного ограждения GlassLoft')}&comment=${encodeURIComponent(text)}`;
+  }
+
+  if (shareUrl) {
+    window.open(shareUrl, '_blank');
+    closeModal('shareModal');
+  }
+}
+
+function getFormattedDates() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const d = pad(now.getDate());
+  const m = pad(now.getMonth() + 1);
+  const y = now.getFullYear();
+  const dateStr = `${d}.${m}.${y}`;
+  const noDots = `${d}${m}${y}`;
+  
+  const exp = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+  const expD = pad(exp.getDate());
+  const expM = pad(exp.getMonth() + 1);
+  const expY = exp.getFullYear();
+  const expStr = `${expD}.${expM}.${expY}`;
+  
+  return { dateStr, noDots, expStr };
+}
+
+function updateKpDocumentData() {
+  const dates = getFormattedDates();
+  
+  // Custom inputs or defaults
+  const clientVal = (el('custClient') && el('custClient').value.trim()) || 'Частное лицо';
+  const addressVal = (el('custAddress') && el('custAddress').value.trim()) || 'г. Санкт-Петербург';
+  const docNumVal = (el('custDocNum') && el('custDocNum').value.trim()) || `1/${dates.noDots}`;
+  const prepayVal = (el('custPrepay') && el('custPrepay').value.trim()) || '50%';
+  
+  if (el('kpDocNum')) el('kpDocNum').textContent = `№ ${docNumVal}`;
+  if (el('kpDocDate')) el('kpDocDate').textContent = dates.dateStr;
+  if (el('kpDocAddress')) el('kpDocAddress').textContent = addressVal;
+  if (el('kpDocClient')) el('kpDocClient').textContent = clientVal;
+  if (el('kpDocPrepay')) el('kpDocPrepay').textContent = prepayVal;
+  
+  const gName = el('glass').value;
+  const g = D.glass[gName] || { trap: 0, rect: 0 };
+  const trapA = val('trapArea') || 0;
+  const rectA = val('rectArea') || 0;
+  const rawGlassSum = trapA * g.trap + rectA * g.rect;
+  const glassSum = roundUp500(rawGlassSum);
+  
+  const parts = [];
+  let hardSum = 0;
+  document.querySelectorAll('.hardQty').forEach(inp => {
+    const idx = parseInt(inp.dataset.idx);
+    const item = D.hard[idx];
+    if (!item) return;
+    const qty = inp.value.trim() === '' ? null : (parseFloat(inp.value) || 0);
+    const sumInput = document.querySelector(`.hardSum[data-idx="${idx}"]`);
+    const man = sumInput && sumInput.value.trim() !== '' ? (parseFloat(sumInput.value) || 0) : null;
+    let s = 0;
+    if (man !== null) s = man;
+    else if (qty !== null) s = qty * item.price;
+    if (s > 0 || (qty !== null && qty > 0)) {
+      hardSum += s;
+      parts.push(item.name.toLowerCase() + (qty ? ` ${qty} ${item.unit}` : ''));
+    }
+  });
+
+  const railName = el('railSelect').value;
+  const railItem = D.rail.find(r => r.name === railName) || { price: 0 };
+  const railLength = val('railLength');
+  const railManual = val('railManual');
+  const isWoodenRail = /деревянн/i.test(railName) && !/без поручня/i.test(railName);
+
+  let rawRailSum = 0;
+  if (railManual !== null) rawRailSum = railManual;
+  else if (railLength !== null) rawRailSum = railLength * railItem.price;
+  const railSumRound = roundUp500(rawRailSum);
+
+  if (!isWoodenRail && !/без поручня/i.test(railName)) {
+    if (rawRailSum > 0 || (railLength !== null && railLength > 0)) {
+      parts.push(railName.toLowerCase() + (railLength ? ` ${railLength} м.пог` : ''));
+      hardSum += rawRailSum;
+    }
+  }
+
+  const rawHardwareTotal = hardSum;
+  const hardwareTotal = roundUp500(rawHardwareTotal);
+
+  const rawDelSum = el('delOn').checked ? num('delPrice') : 0;
+  const delSum = roundUp500(rawDelSum);
+
+  const mode = el('instMode').value;
+  const base1_4 = glassSum + hardwareTotal;
+  let rawInstSum = 0;
+  if (el('instOn').checked) {
+    rawInstSum = mode === 'fix' ? num('instFix') : (base1_4 * num('instPct') / 100);
+  }
+  const instSum = roundUp500(rawInstSum);
+
+  let servSum = 0;
+  const servRows = [];
+  document.querySelectorAll('.servPrice').forEach(inp => {
+    const idx = parseInt(inp.dataset.idx);
+    const s = D.services[idx];
+    if (!s) return;
+    const v = inp.value.trim() === '' ? null : (parseFloat(inp.value) || 0);
+    if (v !== null && v > 0) {
+      const roundedV = roundUp500(v);
+      servSum += roundedV;
+      servRows.push({ name: s.name, price: roundedV, priceStr: rub(roundedV) });
+    } else if (s.emptyDefault === 'free') {
+      servRows.push({ name: s.name, price: 0, priceStr: 'бесплатно' });
+    }
+  });
+
+  const total = glassSum + hardwareTotal + delSum + instSum + servSum;
+
+  if (el('kpDocTotal')) el('kpDocTotal').textContent = rub(total);
+  if (el('kpDocTerm')) el('kpDocTerm').textContent = `${num('termDays')} раб. дней`;
+  if (el('kpDocExpire')) el('kpDocExpire').textContent = dates.expStr;
+
+  // Build table rows
+  let rowsHtml = '';
+  
+  // 1. Стекло
+  const glassDesc = `Стекло закаленное ${gName}${trapA > 0 ? ` (трапеции: ${trapA} м²)` : ''}${rectA > 0 ? ` (прямоуг.: ${rectA} м²)` : ''}`;
+  rowsHtml += `<tr>
+    <td><b>${glassDesc}</b></td>
+    <td class="c">компл.</td>
+    <td class="c">1</td>
+    <td class="r">${rub(glassSum)}</td>
+    <td class="r">${rub(glassSum)}</td>
+  </tr>`;
+
+  // 2. Комплект фурнитуры
+  const hardDesc = `Комплект фурнитуры${parts.length ? ` (${parts.join(', ')})` : ''}`;
+  rowsHtml += `<tr>
+    <td><b>${hardDesc}</b></td>
+    <td class="c">компл.</td>
+    <td class="c">1</td>
+    <td class="r">${rub(hardwareTotal)}</td>
+    <td class="r">${rub(hardwareTotal)}</td>
+  </tr>`;
+
+  // 3. Доставка
+  const delDesc = 'Доставка, разгрузка';
+  rowsHtml += `<tr>
+    <td>${delDesc}</td>
+    <td class="c">компл.</td>
+    <td class="c">1</td>
+    <td class="r">${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}</td>
+    <td class="r">${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : '0 ₽'}</td>
+  </tr>`;
+
+  // 4. Монтаж
+  const instDesc = 'Монтажные работы';
+  rowsHtml += `<tr>
+    <td>${instDesc}</td>
+    <td class="c">компл.</td>
+    <td class="c">1</td>
+    <td class="r">${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : 'не требуются'}</td>
+    <td class="r">${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : '0 ₽'}</td>
+  </tr>`;
+
+  // 5. Доп. услуги
+  servRows.forEach(sr => {
+    rowsHtml += `<tr>
+      <td>${sr.name}</td>
+      <td class="c">компл.</td>
+      <td class="c">1</td>
+      <td class="r">${sr.priceStr}</td>
+      <td class="r">${sr.price > 0 ? rub(sr.price) : '0 ₽'}</td>
+    </tr>`;
+  });
+
+  if (el('kpDocTableBody')) el('kpDocTableBody').innerHTML = rowsHtml;
+
+  // Wooden Handrail Note
+  const railOptEl = el('kpDocRailOption');
+  if (railOptEl) {
+    if (isWoodenRail) {
+      if (railSumRound > 0) {
+        railOptEl.textContent = `Дополнительная опция: ${railName}${railLength ? ` (${railLength} м.пог.)` : ''} — ${rub(railSumRound)}`;
+      } else {
+        railOptEl.textContent = `Дополнительная опция: ${railName} — ${fmt(railItem.price)} ₽/м.пог.`;
+      }
+      railOptEl.style.display = 'block';
+    } else {
+      railOptEl.style.display = 'none';
+    }
+  }
+}
+
+function openKpSettingsModal() {
+  const dates = getFormattedDates();
+  if (el('custDocNum') && !el('custDocNum').value) {
+    el('custDocNum').value = `1/${dates.noDots}`;
+  }
+  openModal('kpSettingsModal');
+}
+
+async function exportKP(format) {
+  showToast(`Формирование ${format.toUpperCase()}... ⏳`);
+  updateKpDocumentData();
+
+  const element = document.getElementById('kpExportPage');
+  if (!element) return;
+
+  try {
+    const canvas = await html2canvas(element, {
+      scale: 2.5,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false
+    });
+
+    const docNumClean = (el('kpDocNum') ? el('kpDocNum').textContent : '1').replace(/[^a-zA-Z0-9а-яА-ЯёЁ_-]/g, '_');
+    const filename = `Коммерческое_предложение_GlassLoft_${docNumClean}`;
+
+    if (format === 'jpeg' || format === 'jpg') {
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      const link = document.createElement('a');
+      link.download = `${filename}.jpeg`;
+      link.href = dataUrl;
+      link.click();
+      showToast('КП скачано в формате .JPEG! 🖼️');
+    } else if (format === 'pdf') {
+      if (window.jspdf && window.jspdf.jsPDF) {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+        const imgWidth = 210;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, 297));
+        pdf.save(`${filename}.pdf`);
+        showToast('КП скачано в формате .PDF! 📄');
+      } else {
+        window.print();
+      }
+    }
+  } catch (err) {
+    console.error('Export error:', err);
+    showToast('Ошибка при формировании файла');
+  }
+}
+
+function sendWhatsApp() {
+  shareTo('whatsapp');
+}
+
+// Функция генерации ссылки с вашими ценами
+function copyShareLink() {
+  const url = getShareConfigUrl();
   
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(url)
