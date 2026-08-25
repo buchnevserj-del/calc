@@ -6,127 +6,194 @@
 <title>GlassLoft — Калькулятор стеклянных ограждений</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
-  <div class="top">
+  
+  <!-- Header / Top Bar -->
+  <header class="top">
     <div class="brand">
-      <svg class="logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="g-bg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#0f172a"/>
-            <stop offset="100%" stop-color="#1e293b"/>
-          </linearGradient>
-          <linearGradient id="g-glass" x1="20" y1="20" x2="80" y2="80" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#38bdf8"/>
-            <stop offset="60%" stop-color="#2563eb"/>
-            <stop offset="100%" stop-color="#1d4ed8"/>
-          </linearGradient>
-          <linearGradient id="g-shine" x1="25" y1="15" x2="65" y2="55" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
-            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-          </linearGradient>
-          <linearGradient id="g-loft" x1="45" y1="45" x2="85" y2="85" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#38bdf8"/>
-            <stop offset="100%" stop-color="#0284c7"/>
-          </linearGradient>
-        </defs>
-        <rect width="100" height="100" rx="24" fill="url(#g-bg)"/>
-        <path d="M72 32C66.5 24.5 57.5 20 48 20C32.5 20 20 32.5 20 48C20 63.5 32.5 76 48 76C63.5 76 76 63.5 76 48H48V59H64C61 64.5 55 67.5 48 67.5C37.2 67.5 28.5 58.8 28.5 48C28.5 37.2 37.2 28.5 48 28.5C54.8 28.5 61 31.8 64.8 37.2L72 32Z" fill="url(#g-glass)"/>
-        <path d="M28.5 48C28.5 37.2 37.2 28.5 48 28.5C54.8 28.5 61 31.8 64.8 37.2L72 32C66.5 24.5 57.5 20 48 20C32.5 20 20 32.5 20 48C20 53.2 21.4 58 23.9 62.1L31.8 54.2C29.7 52.4 28.5 50.3 28.5 48Z" fill="url(#g-shine)"/>
-        <rect x="48" y="47" width="28" height="9" rx="4.5" fill="url(#g-loft)"/>
-      </svg>
-      <div>
-        <h1>GlassLoft</h1>
-        <span class="tagline">Калькулятор ограждений</span>
+      <div class="logo-wrap">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="g-bg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#0f172a"/>
+              <stop offset="100%" stop-color="#1e293b"/>
+            </linearGradient>
+            <linearGradient id="g-glass" x1="20" y1="20" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#38bdf8"/>
+              <stop offset="60%" stop-color="#2563eb"/>
+              <stop offset="100%" stop-color="#1d4ed8"/>
+            </linearGradient>
+            <linearGradient id="g-shine" x1="25" y1="15" x2="65" y2="55" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="g-loft" x1="45" y1="45" x2="85" y2="85" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#38bdf8"/>
+              <stop offset="100%" stop-color="#0284c7"/>
+            </linearGradient>
+          </defs>
+          <rect width="100" height="100" rx="24" fill="url(#g-bg)"/>
+          <path d="M72 32C66.5 24.5 57.5 20 48 20C32.5 20 20 32.5 20 48C20 63.5 32.5 76 48 76C63.5 76 76 63.5 76 48H48V59H64C61 64.5 55 67.5 48 67.5C37.2 67.5 28.5 58.8 28.5 48C28.5 37.2 37.2 28.5 48 28.5C54.8 28.5 61 31.8 64.8 37.2L72 32Z" fill="url(#g-glass)"/>
+          <path d="M28.5 48C28.5 37.2 37.2 28.5 48 28.5C54.8 28.5 61 31.8 64.8 37.2L72 32C66.5 24.5 57.5 20 48 20C32.5 20 20 32.5 20 48C20 53.2 21.4 58 23.9 62.1L31.8 54.2C29.7 52.4 28.5 50.3 28.5 48Z" fill="url(#g-shine)"/>
+          <rect x="48" y="47" width="28" height="9" rx="4.5" fill="url(#g-loft)"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>GlassLoft <span class="version-badge">2026</span></h1>
+        <span class="tagline">Калькулятор стеклянных ограждений</span>
       </div>
     </div>
-    <button class="btn b-dark" onclick="saveAll()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-      Сохранить
-    </button>
-  </div>
+    <div class="header-actions">
+      <button class="btn b-gray" onclick="copyShareLink()" title="Поделиться ссылкой с вашими настройками цен">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+        <span>Ссылка</span>
+      </button>
+      <button class="btn b-dark" onclick="saveAll()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        <span>Сохранить</span>
+      </button>
+    </div>
+  </header>
 
   <!-- Step 0: Длина ограждения (в самом начале) -->
-  <div class="card">
+  <section class="card highlight">
     <div class="head">
       <h2><span class="n">📐</span>Длина ограждения (м.пог.)</h2>
     </div>
     <div class="grid">
-      <div>
-        <label>Длина трапеции, м.пог</label>
-        <input type="number" id="trapLen" placeholder="0" min="0" step="0.01" oninput="calcFromLength()">
-        <div class="hint">× 1,25 + 35% → Площадь трапеций (п. 2)</div>
+      <div class="field">
+        <label>Длина трапеций</label>
+        <div class="input-wrap">
+          <input type="number" id="trapLen" placeholder="0" min="0" step="0.01" oninput="calcFromLength()">
+          <span class="unit">м.пог</span>
+        </div>
+        <div class="hint">× 1,25 + 35% → в пункт 2 (м²)</div>
       </div>
-      <div>
-        <label>Длина прямоуг., м.пог</label>
-        <input type="number" id="rectLen" placeholder="0" min="0" step="0.01" oninput="calcFromLength()">
-        <div class="hint">× 1,25 → Площадь прямоуг. (п. 2)</div>
+      <div class="field">
+        <label>Длина прямоугольников</label>
+        <div class="input-wrap">
+          <input type="number" id="rectLen" placeholder="0" min="0" step="0.01" oninput="calcFromLength()">
+          <span class="unit">м.пог</span>
+        </div>
+        <div class="hint">× 1,25 → в пункт 2 (м²)</div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Step 1 -->
-  <div class="card">
+  <!-- Step 1: Тип стекла -->
+  <section class="card">
     <div class="head">
       <h2><span class="n">1</span>Тип стекла</h2>
-      <button class="btn ghost" onclick="openModal('glassModal')">Настройки</button>
+      <button class="btn ghost" onclick="openModal('glassModal')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Настройки
+      </button>
     </div>
     <label>Выберите стекло</label>
     <select id="glass" onchange="calc()"></select>
     <div class="hint" id="glassHint"></div>
-  </div>
+  </section>
 
-  <!-- Step 2 -->
-  <div class="card">
-    <div class="head"><h2><span class="n">2</span>Расчёт стекла</h2></div>
+  <!-- Step 2: Расчёт стекла -->
+  <section class="card">
+    <div class="head">
+      <h2><span class="n">2</span>Расчёт стекла</h2>
+    </div>
     <div class="sub">
-      <b>Фигуры (трапеции)</b>
-      <div class="grid" style="margin-top:8px">
-        <div><label>Площадь, м²</label><input type="number" id="trapArea" placeholder="0" min="0" step="0.01" oninput="calc()"></div>
-        <div><label>Цена, ₽/м²</label><input type="number" id="trapPrice" readonly></div>
+      <div class="sub-title"><b>Фигуры (трапеции)</b></div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field">
+          <label>Площадь, м²</label>
+          <div class="input-wrap">
+            <input type="number" id="trapArea" placeholder="0" min="0" step="0.01" oninput="calc()">
+            <span class="unit">м²</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Цена, ₽/м²</label>
+          <div class="input-wrap">
+            <input type="number" id="trapPrice" readonly>
+            <span class="unit">₽/м²</span>
+          </div>
+        </div>
       </div>
     </div>
     <div class="sub">
-      <b>Прямоугольники</b>
-      <div class="grid" style="margin-top:8px">
-        <div><label>Площадь, м²</label><input type="number" id="rectArea" placeholder="0" min="0" step="0.01" oninput="calc()"></div>
-        <div><label>Цена, ₽/м²</label><input type="number" id="rectPrice" readonly></div>
+      <div class="sub-title"><b>Прямоугольники</b></div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field">
+          <label>Площадь, м²</label>
+          <div class="input-wrap">
+            <input type="number" id="rectArea" placeholder="0" min="0" step="0.01" oninput="calc()">
+            <span class="unit">м²</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Цена, ₽/м²</label>
+          <div class="input-wrap">
+            <input type="number" id="rectPrice" readonly>
+            <span class="unit">₽/м²</span>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Step 3 -->
-  <div class="card">
+  <!-- Step 3: Фурнитура -->
+  <section class="card">
     <div class="head">
       <h2><span class="n">3</span>Фурнитура</h2>
-      <button class="btn ghost" onclick="openModal('hardModal')">Настройки</button>
+      <button class="btn ghost" onclick="openModal('hardModal')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Настройки
+      </button>
     </div>
     <div id="hardList"></div>
-  </div>
+  </section>
 
-  <!-- Step 4 -->
-  <div class="card">
+  <!-- Step 4: Поручень -->
+  <section class="card">
     <div class="head">
       <h2><span class="n">4</span>Поручень</h2>
-      <button class="btn ghost" onclick="openModal('railModal')">Настройки</button>
+      <button class="btn ghost" onclick="openModal('railModal')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Настройки
+      </button>
     </div>
     <label>Тип поручня</label>
     <select id="railSelect" onchange="calc()"></select>
-    <div class="grid" style="margin-top:10px">
-      <div><label>Длина, м.пог</label><input type="number" id="railLength" placeholder="—" min="0" step="0.1" oninput="calc()"></div>
-      <div><label>Сумма вручную, ₽</label><input type="number" id="railManual" placeholder="авто" min="0" step="100" oninput="calc()"></div>
+    <div class="grid" style="margin-top:12px">
+      <div class="field">
+        <label>Длина</label>
+        <div class="input-wrap">
+          <input type="number" id="railLength" placeholder="—" min="0" step="0.1" oninput="calc()">
+          <span class="unit">м.пог</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Сумма вручную</label>
+        <div class="input-wrap">
+          <input type="number" id="railManual" placeholder="авто" min="0" step="100" oninput="calc()">
+          <span class="unit">₽</span>
+        </div>
+      </div>
     </div>
     <div class="hint" id="railHint"></div>
-  </div>
+  </section>
 
-  <!-- Step 5 -->
-  <div class="card">
+  <!-- Step 5: Доставка и разгрузка -->
+  <section class="card">
     <div class="head">
       <h2><span class="n">5</span>Доставка и разгрузка</h2>
-      <button class="btn ghost" onclick="openModal('deliveryModal')">Настройки</button>
+      <button class="btn ghost" onclick="openModal('deliveryModal')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Настройки
+      </button>
     </div>
     <label class="switch-wrap">
       <div class="switch">
@@ -135,14 +202,23 @@
       </div>
       <span>Включить в расчёт</span>
     </label>
-    <div style="max-width:220px"><label>Стоимость, ₽</label><input type="number" id="delPrice" min="0" step="100" oninput="calc()"></div>
-  </div>
+    <div style="max-width:240px">
+      <label>Стоимость</label>
+      <div class="input-wrap">
+        <input type="number" id="delPrice" min="0" step="100" oninput="calc()">
+        <span class="unit">₽</span>
+      </div>
+    </div>
+  </section>
 
-  <!-- Step 6 -->
-  <div class="card">
+  <!-- Step 6: Монтажные работы -->
+  <section class="card">
     <div class="head">
       <h2><span class="n">6</span>Монтажные работы</h2>
-      <button class="btn ghost" onclick="openModal('installModal')">Настройки</button>
+      <button class="btn ghost" onclick="openModal('installModal')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Настройки
+      </button>
     </div>
     <label class="switch-wrap">
       <div class="switch">
@@ -152,42 +228,71 @@
       <span>Включить в расчёт</span>
     </label>
     <div class="grid">
-      <div>
+      <div class="field">
         <label>Способ расчёта</label>
         <select id="instMode" onchange="calc()">
           <option value="fix">Фиксированная сумма, ₽</option>
           <option value="pct">Процент от пунктов 1–4</option>
         </select>
       </div>
-      <div id="instFixWrap"><label>Сумма, ₽</label><input type="number" id="instFix" min="0" step="500" oninput="calc()"></div>
-      <div id="instPctWrap" style="display:none"><label>Процент, %</label><input type="number" id="instPct" min="0" step="1" oninput="calc()"></div>
+      <div class="field" id="instFixWrap">
+        <label>Сумма монтажа</label>
+        <div class="input-wrap">
+          <input type="number" id="instFix" min="0" step="500" oninput="calc()">
+          <span class="unit">₽</span>
+        </div>
+      </div>
+      <div class="field" id="instPctWrap" style="display:none">
+        <label>Процент от позиций 1–4</label>
+        <div class="input-wrap">
+          <input type="number" id="instPct" min="0" step="1" oninput="calc()">
+          <span class="unit">%</span>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Step 7 -->
-  <div class="card">
+  <!-- Step 7: Дополнительные услуги -->
+  <section class="card">
     <div class="head">
       <h2><span class="n">7</span>Дополнительные услуги</h2>
-      <button class="btn ghost" onclick="openModal('serviceModal')">Настройки</button>
+      <button class="btn ghost" onclick="openModal('serviceModal')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Настройки
+      </button>
     </div>
     <div id="serviceList"></div>
-  </div>
+  </section>
 
-  <!-- Step 8 -->
-  <div class="card">
+  <!-- Step 8: Срок изготовления -->
+  <section class="card">
     <div class="head">
       <h2><span class="n">8</span>Срок изготовления</h2>
-      <button class="btn ghost" onclick="openModal('termModal')">Настройки</button>
+      <button class="btn ghost" onclick="openModal('termModal')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Настройки
+      </button>
     </div>
     <div class="grid">
-      <div><label>Рабочих дней</label><input type="number" id="termDays" min="1" step="1" oninput="termManual=true; calc();"></div>
-      <div style="display:flex;align-items:end"><button class="btn b-gray" style="width:100%" onclick="termManual=false; calc();">Авто по типу стекла</button></div>
+      <div class="field">
+        <label>Рабочих дней</label>
+        <div class="input-wrap">
+          <input type="number" id="termDays" min="1" step="1" oninput="termManual=true; calc();">
+          <span class="unit">дней</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn b-gray" style="width:100%;height:46px" onclick="termManual=false; calc();">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Авто по типу стекла
+        </button>
+      </div>
     </div>
     <div class="hint" id="termHint"></div>
-  </div>
+  </section>
 
   <!-- Total Summary Card -->
-  <div class="total">
+  <section class="total">
     <div class="total-top">
       <div>
         <h2>Коммерческое предложение</h2>
@@ -195,12 +300,21 @@
       </div>
       <button class="btn b-teal" onclick="copyQuote()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        Скопировать
+        Скопировать КП
       </button>
     </div>
-    <div class="sum" id="sum">0 ₽</div>
+    <div class="sum-display">
+      <div class="sum-label">Итоговая стоимость ограждения</div>
+      <div class="sum" id="sum">0 ₽</div>
+    </div>
     <div id="quoteText"></div>
-  </div>
+  </section>
+</div>
+
+<!-- Toast Alert -->
+<div class="toast" id="toast">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+  <span id="toastMsg">Скопировано!</span>
 </div>
 
 <!-- Modals -->
@@ -212,7 +326,7 @@
     <input type="text" id="ngName" placeholder="Название">
     <input type="number" id="ngTrap" placeholder="Трапеция ₽/м²">
     <input type="number" id="ngRect" placeholder="Прямоуг. ₽/м²">
-    <button class="btn b-blue" onclick="addGlass()">Добавить</button>
+    <button class="btn b-primary" onclick="addGlass()">Добавить</button>
   </div>
 </div></div>
 
@@ -224,7 +338,7 @@
     <input type="text" id="nhName" placeholder="Название">
     <input type="number" id="nhPrice" placeholder="Цена">
     <select id="nhUnit"><option value="шт">шт</option><option value="м.пог">м.пог</option></select>
-    <button class="btn b-blue" onclick="addHard()">Добавить</button>
+    <button class="btn b-primary" onclick="addHard()">Добавить</button>
   </div>
 </div></div>
 
@@ -235,7 +349,7 @@
   <div class="actions">
     <input type="text" id="nrName" placeholder="Название">
     <input type="number" id="nrPrice" placeholder="₽/м.пог">
-    <button class="btn b-blue" onclick="addRail()">Добавить</button>
+    <button class="btn b-primary" onclick="addRail()">Добавить</button>
   </div>
 </div></div>
 
@@ -243,16 +357,25 @@
   <span class="close" onclick="closeModal('deliveryModal')">&times;</span>
   <h3>Доставка</h3>
   <label>Стоимость по умолчанию, ₽</label>
-  <input type="number" id="deliverySetting" oninput="M.delivery=parseFloat(this.value)||0; applyMisc(); autoSave(); calc();">
+  <div class="input-wrap">
+    <input type="number" id="deliverySetting" oninput="M.delivery=parseFloat(this.value)||0; applyMisc(); autoSave(); calc();">
+    <span class="unit">₽</span>
+  </div>
 </div></div>
 
 <div class="modal" id="installModal"><div class="mbox">
   <span class="close" onclick="closeModal('installModal')">&times;</span>
   <h3>Монтаж</h3>
   <label>Фиксированная сумма по умолчанию, ₽</label>
-  <input type="number" id="instFixSetting" oninput="M.instFix=parseFloat(this.value)||0; applyMisc(); autoSave(); calc();">
-  <label style="margin-top:10px">Процент от пунктов 1–4 по умолчанию, %</label>
-  <input type="number" id="instPctSetting" oninput="M.instPct=parseFloat(this.value)||0; applyMisc(); autoSave(); calc();">
+  <div class="input-wrap" style="margin-bottom:12px">
+    <input type="number" id="instFixSetting" oninput="M.instFix=parseFloat(this.value)||0; applyMisc(); autoSave(); calc();">
+    <span class="unit">₽</span>
+  </div>
+  <label>Процент от пунктов 1–4 по умолчанию, %</label>
+  <div class="input-wrap">
+    <input type="number" id="instPctSetting" oninput="M.instPct=parseFloat(this.value)||0; applyMisc(); autoSave(); calc();">
+    <span class="unit">%</span>
+  </div>
 </div></div>
 
 <div class="modal" id="serviceModal"><div class="mbox">
@@ -262,7 +385,7 @@
   <div class="actions">
     <input type="text" id="nsName" placeholder="Название">
     <select id="nsEmpty"><option value="free">бесплатно</option><option value="hide">скрыть</option></select>
-    <button class="btn b-blue" onclick="addService()">Добавить</button>
+    <button class="btn b-primary" onclick="addService()">Добавить</button>
   </div>
 </div></div>
 
@@ -270,9 +393,15 @@
   <span class="close" onclick="closeModal('termModal')">&times;</span>
   <h3>Сроки</h3>
   <label>Обычное стекло, раб. дней</label>
-  <input type="number" id="termGlassSetting" oninput="M.termGlass=parseInt(this.value)||21; applyMisc(); autoSave(); calc();">
-  <label style="margin-top:10px">Триплекс, раб. дней</label>
-  <input type="number" id="termTriplexSetting" oninput="M.termTripl=parseInt(this.value)||25; applyMisc(); autoSave(); calc();">
+  <div class="input-wrap" style="margin-bottom:12px">
+    <input type="number" id="termGlassSetting" oninput="M.termGlass=parseInt(this.value)||21; applyMisc(); autoSave(); calc();">
+    <span class="unit">дней</span>
+  </div>
+  <label>Триплекс, раб. дней</label>
+  <div class="input-wrap">
+    <input type="number" id="termTriplexSetting" oninput="M.termTripl=parseInt(this.value)||25; applyMisc(); autoSave(); calc();">
+    <span class="unit">дней</span>
+  </div>
 </div></div>
 
 <script src="script.js"></script>

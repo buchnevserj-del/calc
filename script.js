@@ -408,11 +408,22 @@ function calc() {
   el('quoteText').textContent = t;
 }
 
+let toastTimer = null;
+function showToast(msg) {
+  const toast = el('toast');
+  const toastMsg = el('toastMsg');
+  if (!toast || !toastMsg) { alert(msg); return; }
+  toastMsg.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2600);
+}
+
 function copyQuote() {
   const text = el('quoteText').textContent;
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text)
-      .then(() => alert('Текст скопирован'))
+      .then(() => showToast('Текст КП скопирован в буфер!'))
       .catch(() => fallbackCopy(text));
   } else {
     fallbackCopy(text);
@@ -427,7 +438,7 @@ function copyShareLink() {
   
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(url)
-      .then(() => alert('Ссылка с вашими ценами скопирована в буфер обмена!'))
+      .then(() => showToast('Ссылка с настройками скопирована!'))
       .catch(() => fallbackCopy(url));
   } else {
     fallbackCopy(url);
@@ -443,7 +454,7 @@ function fallbackCopy(text) {
   ta.select();
   try {
     document.execCommand('copy');
-    alert('Ссылка скопирована!');
+    showToast('Скопировано в буфер!');
   } catch (err) {
     alert('Выделите и скопируйте текст вручную');
   }
@@ -462,7 +473,7 @@ function autoSave() {
 
 function saveAll() {
   autoSave();
-  alert('Настройки сохранены на этом устройстве');
+  showToast('Настройки сохранены на устройстве!');
 }
 
 function buildAll() {
