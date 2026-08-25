@@ -162,7 +162,7 @@ function buildRailSelect() {
 function buildServiceList() {
   el('serviceList').innerHTML = D.services.map((s, idx) => `
     <div class="row3" style="grid-template-columns:1fr 140px">
-      <div class="nm">${s.name}<span class="pt">${s.emptyDefault === 'free' ? 'пусто → бесплатно' : 'пусто → скрыть'}</span></div>
+      <div class="nm">${s.name}<span class="pt">${s.emptyDefault === 'free' ? 'пусто → скрыть' : 'пусто → скрыть'}</span></div>
       <div>
         <label>Цена, ₽</label>
         <div class="input-wrap">
@@ -190,14 +190,18 @@ function applyMisc() {
 function openModal(id) {
   if (SETTINGS_MODALS.includes(id) && !isAdminUnlocked) {
     pendingModalId = id;
-    el('pinInput').value = '';
-    el('pinError').style.display = 'none';
-    el('pinModal').classList.add('open');
-    setTimeout(() => el('pinInput').focus(), 100);
+    const pInp = el('pinInput');
+    const pErr = el('pinError');
+    if (pInp) pInp.value = '';
+    if (pErr) pErr.style.display = 'none';
+    const pm = el('pinModal');
+    if (pm) pm.classList.add('open');
+    setTimeout(() => { const inp = el('pinInput'); if (inp) inp.focus(); }, 100);
     return;
   }
   renderSettingsFor(id);
-  el(id).classList.add('open');
+  const target = el(id);
+  if (target) target.classList.add('open');
 }
 
 function closeModal(id) { 
@@ -321,7 +325,7 @@ function renderServiceSettings() {
     <div class="srow two">
       <span>${s.name}</span>
       <select onchange="D.services[${idx}].emptyDefault=this.value; buildServiceList(); autoSave(); calc();">
-        <option value="free" ${s.emptyDefault==='free'?'selected':''}>бесплатно</option>
+        <option value="free" ${s.emptyDefault==='free'?'selected':''}>скрыть</option>
         <option value="hide" ${s.emptyDefault==='hide'?'selected':''}>скрыть</option>
       </select>
       <button class="btn b-red" onclick="delService(${idx})">✕</button>
@@ -374,7 +378,7 @@ function addRail() {
 function addService() {
   const n = el('nsName').value.trim();
   if (!n) return alert('Введите название');
-  D.services.push({ name: n, emptyDefault: el('nsEmpty').value });
+  D.services.push({ name: n, emptyDefault: 'hide' });
   el('nsName').value = '';
   buildServiceList(); renderServiceSettings(); autoSave(); calc();
 }
@@ -480,7 +484,7 @@ function calc() {
   }
   const instSum = roundUp500(rawInstSum);
 
-  // 5. Дополнительные услуги (каждая с округлением до 500 ₽)
+  // 5. Дополнительные услуги: НЕ вписываем, если сумма не указана (> 0)
   let servSum = 0;
   const servLines = [];
   document.querySelectorAll('.servPrice').forEach(inp => {
@@ -492,12 +496,10 @@ function calc() {
       const roundedV = roundUp500(v);
       servSum += roundedV;
       servLines.push(`${s.name} — ${rub(roundedV)}`);
-    } else if (s.emptyDefault === 'free') {
-      servLines.push(`${s.name} — бесплатно`);
     }
   });
 
-  // Итоговая сумма складывается из всех пунктов сметы (включая поручень)
+  // Итоговая сумма складывается из всех позиций (включая поручень)
   const total = glassSum + hardwareTotal + (hasRail ? railSumRound : 0) + delSum + instSum + servSum;
 
   el('sum').textContent = rub(total);
@@ -511,98 +513,28 @@ function calc() {
 
   let t = 'Стоимость ограждения будет следующей:\n\n';
   let counter = 1;
+  // Стекло без указания метров квадратных
   t += `${counter++}. Стекло закаленное ${gName} — ${rub(glassSum)}\n`;
   t += `${counter++}. Комплект фурнитуры`;
   if (parts.length) t += ` (${parts.join(', ')})`;
   t += ` — ${rub(hardwareTotal)}\n`;
 
+  // Поручень отдельным пунктом без указания погонных метров
   if (hasRail) {
-    t += `${counter++}. Поручень: ${railName}${railLength ? ` (${railLength} м.пог.)` : ''} — ${rub(railSumRound)}\n`;
+    t += `${counter++}. Поручень: ${railName} — ${rub(railSumRound)}\n`;
   }
 
   t += `${counter++}. Доставка, разгрузка — ${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}\n`;
   t += `${counter++}. Монтажные работы — ${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : 'не требуются'}\n`;
   
+  // Доп услуги только если > 0
   servLines.forEach(line => { t += `${counter++}. ${line}\n`; });
   t += `\nИтого общая стоимость — ${fmt(total)} рублей.\n`;
   t += `Срок изготовления — ${num('termDays')} рабочих дней.`;
 
   el('quoteText').textContent = t;
-}
-
-let toastTimer = null;
-function showToast(msg) {
-  const toast = el('toast');
-  const toastMsg = el('toastMsg');
-  if (!toast || !toastMsg) { alert(msg); return; }
-  toastMsg.textContent = msg;
-  toast.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2600);
-}
-
-function copyQuote() {
-  const text = el('quoteText').textContent;
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text)
-      .then(() => showToast('Текст КП скопирован в буфер!'))
-      .catch(() => fallbackCopy(text));
-  } else {
-    fallbackCopy(text);
-  }
-}
-
-function getShareConfigUrl() {
-  const jsonStr = JSON.stringify(pack());
-  const encoded = btoa(String.fromCharCode(...new TextEncoder().encode(jsonStr)));
-  return window.location.origin + window.location.pathname + '#cfg=' + encoded;
-}
-
-async function openShareHub() {
-  const text = el('quoteText').textContent;
-  const sum = el('sum').textContent;
-  const url = getShareConfigUrl();
-
-  // На мобильных устройствах сначала пробуем нативное системное меню "Поделиться"
-  if (navigator.share && /mobile|android|iphone|ipad|ipod/i.test(navigator.userAgent)) {
-    try {
-      await navigator.share({
-        title: `GlassLoft — Расчёт ограждения (${sum})`,
-        text: text,
-        url: url
-      });
-      return;
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        openModal('shareModal');
-      }
-      return;
-    }
-  }
-
-  // На ПК и других устройствах открываем стильный Share Hub с мессенджерами
-  openModal('shareModal');
-}
-
-function shareTo(platform) {
-  const text = el('quoteText').textContent;
-  const url = getShareConfigUrl();
-  let shareUrl = '';
-
-  if (platform === 'telegram') {
-    shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-  } else if (platform === 'whatsapp') {
-    shareUrl = `https://wa.me/?text=${encodeURIComponent(text + '\n\nСсылка на конфигурацию: ' + url)}`;
-  } else if (platform === 'email') {
-    shareUrl = `mailto:?subject=${encodeURIComponent('Коммерческое предложение по стеклянным ограждениям (GlassLoft)')}&body=${encodeURIComponent(text + '\n\nСсылка на расчёт: ' + url)}`;
-  } else if (platform === 'vk') {
-    shareUrl = `https://vk.com/share.php?url=${encodeURIComponent(url)}&title=${encodeURIComponent('Расчёт стеклянного ограждения GlassLoft')}&comment=${encodeURIComponent(text)}`;
-  }
-
-  if (shareUrl) {
-    window.open(shareUrl, '_blank');
-    closeModal('shareModal');
-  }
+  
+  updateKpDocumentData();
 }
 
 function getFormattedDates() {
@@ -623,12 +555,26 @@ function getFormattedDates() {
   return { dateStr, noDots, expStr };
 }
 
+function getKpFileName() {
+  const dates = getFormattedDates();
+  const docNum = (el('custDocNum') && el('custDocNum').value.trim()) || '1';
+  const docNumClean = docNum.replace(/[^a-zA-Z0-9]/g, '');
+  
+  const rawAddr = (el('calcAddress') && el('calcAddress').value.trim()) || 'г. Санкт-Петербург';
+  const addrClean = rawAddr
+    .replace(/[\s,.-]+/g, '_')
+    .replace(/[^a-zA-Z0-9а-яА-ЯёЁ_]/g, '')
+    .replace(/^_+|_+$/g, '');
+    
+  // Формат: КП_порядковый номер-дата без точек, запятых и тире_адрес объекта
+  return `КП_${docNumClean}-${dates.noDots}_${addrClean || 'объект'}`;
+}
+
 function updateKpDocumentData() {
   const dates = getFormattedDates();
   
-  // Custom inputs or defaults
-  const clientVal = (el('custClient') && el('custClient').value.trim()) || 'Частное лицо';
-  const addressVal = (el('custAddress') && el('custAddress').value.trim()) || 'г. Санкт-Петербург';
+  const clientVal = (el('calcClient') && el('calcClient').value.trim()) || 'Частное лицо';
+  const addressVal = (el('calcAddress') && el('calcAddress').value.trim()) || 'г. Санкт-Петербург';
   const docNumVal = (el('custDocNum') && el('custDocNum').value.trim()) || `1/${dates.noDots}`;
   const prepayVal = (el('custPrepay') && el('custPrepay').value.trim()) || '50%';
   
@@ -701,8 +647,6 @@ function updateKpDocumentData() {
       const roundedV = roundUp500(v);
       servSum += roundedV;
       servRows.push({ name: s.name, price: roundedV, priceStr: rub(roundedV) });
-    } else if (s.emptyDefault === 'free') {
-      servRows.push({ name: s.name, price: 0, priceStr: 'бесплатно' });
     }
   });
 
@@ -712,11 +656,11 @@ function updateKpDocumentData() {
   if (el('kpDocTerm')) el('kpDocTerm').textContent = `${num('termDays')} раб. дней`;
   if (el('kpDocExpire')) el('kpDocExpire').textContent = dates.expStr;
 
-  // Build table rows without any bold tags
+  // Build table rows without any bold tags and without area/length metrics
   let rowsHtml = '';
   
-  // 1. Стекло
-  const glassDesc = `Стекло закаленное ${gName}${trapA > 0 ? ` (трапеции: ${trapA} м²)` : ''}${rectA > 0 ? ` (прямоуг.: ${rectA} м²)` : ''}`;
+  // 1. Стекло (без указания м²)
+  const glassDesc = `Стекло закаленное ${gName}`;
   rowsHtml += `<tr>
     <td>${glassDesc}</td>
     <td class="c">компл.</td>
@@ -735,9 +679,9 @@ function updateKpDocumentData() {
     <td class="r">${rub(hardwareTotal)}</td>
   </tr>`;
 
-  // 3. Поручень (отдельным пунктом)
+  // 3. Поручень (без указания м.пог.)
   if (hasRail) {
-    const railDesc = `Поручень: ${railName}${railLength ? ` (${railLength} м.пог.)` : ''}`;
+    const railDesc = `Поручень: ${railName}`;
     rowsHtml += `<tr>
       <td>${railDesc}</td>
       <td class="c">компл.</td>
@@ -767,29 +711,98 @@ function updateKpDocumentData() {
     <td class="r">${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : '0 ₽'}</td>
   </tr>`;
 
-  // 6. Доп. услуги
+  // 6. Доп. услуги (только если цена указана > 0)
   servRows.forEach(sr => {
     rowsHtml += `<tr>
       <td>${sr.name}</td>
       <td class="c">компл.</td>
       <td class="c">1</td>
       <td class="r">${sr.priceStr}</td>
-      <td class="r">${sr.price > 0 ? rub(sr.price) : '0 ₽'}</td>
+      <td class="r">${rub(sr.price)}</td>
     </tr>`;
   });
 
   if (el('kpDocTableBody')) el('kpDocTableBody').innerHTML = rowsHtml;
-
-  const railOptEl = el('kpDocRailOption');
-  if (railOptEl) railOptEl.style.display = 'none';
 }
 
-function openKpSettingsModal() {
-  const dates = getFormattedDates();
-  if (el('custDocNum') && !el('custDocNum').value) {
-    el('custDocNum').value = `1/${dates.noDots}`;
+let toastTimer = null;
+function showToast(msg) {
+  const toast = el('toast');
+  const toastMsg = el('toastMsg');
+  if (!toast || !toastMsg) { alert(msg); return; }
+  toastMsg.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2600);
+}
+
+function copyQuote() {
+  const text = el('quoteText').textContent;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('Текст сметы скопирован!'))
+      .catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
   }
-  openModal('kpSettingsModal');
+}
+
+async function sharePDF() {
+  showToast('Формирование PDF для отправки... ⏳');
+  updateKpDocumentData();
+
+  const element = document.getElementById('kpExportPage');
+  if (!element) return;
+
+  try {
+    const canvas = await html2canvas(element, {
+      scale: 2.5,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false
+    });
+
+    const filename = getKpFileName() + '.pdf';
+    
+    if (window.jspdf && window.jspdf.jsPDF) {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, 297));
+      
+      const pdfBlob = pdf.output('blob');
+      const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+      // На мобильных устройствах открываем системное меню шеринга файла
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        try {
+          await navigator.share({
+            files: [pdfFile],
+            title: filename
+          });
+          showToast('Файл успешно отправлен!');
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+        }
+      }
+
+      // Если шеринг файлов напрямую не поддерживается браузером, скачиваем PDF
+      pdf.save(filename);
+      showToast('PDF-файл сформирован и скачан! 📄');
+    }
+  } catch (err) {
+    console.error('Share error:', err);
+    showToast('Ошибка при формировании PDF');
+  }
 }
 
 async function exportKP(format) {
@@ -808,16 +821,15 @@ async function exportKP(format) {
       logging: false
     });
 
-    const docNumClean = (el('kpDocNum') ? el('kpDocNum').textContent : '1').replace(/[^a-zA-Z0-9а-яА-ЯёЁ_-]/g, '_');
-    const filename = `Коммерческое_предложение_GlassLoft_${docNumClean}`;
+    const baseName = getKpFileName();
 
     if (format === 'jpeg' || format === 'jpg') {
       const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
       const link = document.createElement('a');
-      link.download = `${filename}.jpeg`;
+      link.download = `${baseName}.jpeg`;
       link.href = dataUrl;
       link.click();
-      showToast('КП скачано в формате .JPEG! 🖼️');
+      showToast('КП скачано в формате JPEG! 🖼️');
     } else if (format === 'pdf') {
       if (window.jspdf && window.jspdf.jsPDF) {
         const { jsPDF } = window.jspdf;
@@ -831,8 +843,8 @@ async function exportKP(format) {
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
         pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, 297));
-        pdf.save(`${filename}.pdf`);
-        showToast('КП скачано в формате .PDF! 📄');
+        pdf.save(`${baseName}.pdf`);
+        showToast('КП скачано в формате PDF! 📄');
       } else {
         window.print();
       }
@@ -840,23 +852,6 @@ async function exportKP(format) {
   } catch (err) {
     console.error('Export error:', err);
     showToast('Ошибка при формировании файла');
-  }
-}
-
-function sendWhatsApp() {
-  shareTo('whatsapp');
-}
-
-// Функция генерации ссылки с вашими ценами
-function copyShareLink() {
-  const url = getShareConfigUrl();
-  
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(url)
-      .then(() => showToast('Ссылка с настройками скопирована!'))
-      .catch(() => fallbackCopy(url));
-  } else {
-    fallbackCopy(url);
   }
 }
 
