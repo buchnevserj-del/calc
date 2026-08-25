@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Коммерческое предложение — GlassLoft</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    font-family: 'Montserrat', sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .a4-page {
+    width: 794px;
+    height: 1123px;
+    max-height: 1123px;
+    background: #ffffff;
+    padding: 24px 32px 20px;
+    position: relative;
+    color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+
+  /* Top Header */
+  .kp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 12px;
+    gap: 16px;
+  }
+  .kp-logo {
+    height: 52px;
+    width: auto;
+    object-fit: contain;
+  }
+  .kp-contacts {
+    font-size: 10.5px;
+    line-height: 1.35;
+    color: #2b2b2b;
+    font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-left: 10px;
+    margin-right: auto;
+  }
+  .kp-contact-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .kp-icon-img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .kp-phones {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    white-space: nowrap;
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+  .kp-title-block {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .kp-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: #206774;
+    letter-spacing: 0.02em;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+  }
+  .kp-num {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 2px;
+  }
+  .kp-date {
+    font-size: 11px;
+    font-weight: 500;
+    color: #444;
+  }
+
+  /* 3 Photos Gallery */
+  .kp-gallery {
+    display: grid;
+    grid-template-columns: 1.15fr 1.15fr 1.35fr;
+    gap: 2px;
+    height: 160px;
+    margin-bottom: 12px;
+  }
+  .kp-gal-item {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #f4f4f4;
+    border-radius: 2px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+  }
+  .kp-gal-img {
+    width: 100%;
+    height: 115px;
+    object-fit: cover;
+  }
+  .kp-gal-img.full {
+    height: 100%;
+  }
+  .kp-gal-info {
+    padding: 4px 8px;
+    background: #ffffff;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-top: 1px solid #e2e8f0;
+  }
+  .kp-gal-label {
+    font-size: 8px;
+    color: #000000;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 1px;
+    letter-spacing: 0.03em;
+  }
+  .kp-gal-val {
+    font-size: 9.5px;
+    font-weight: 500;
+    color: #333333;
+  }
+
+  /* Section Title */
+  .kp-sec-title {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #206774;
+    text-transform: uppercase;
+    margin: 0 0 2px;
+    letter-spacing: 0.02em;
+  }
+  .kp-item-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #111;
+    margin-bottom: 6px;
+  }
+
+  /* Table */
+  .kp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+  }
+  .kp-table th {
+    background: #e4f1f4;
+    color: #206774;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 6px 8px;
+    text-align: left;
+    letter-spacing: 0.02em;
+    border-bottom: 1.5px solid #cbd5e1;
+  }
+  .kp-table th.c { text-align: center; }
+  .kp-table th.r { text-align: right; }
+
+  .kp-table td {
+    padding: 5px 8px;
+    font-size: 9.5px;
+    color: #1e293b;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+  }
+  .kp-table td.c { text-align: center; font-weight: 500; color: #475569; }
+  .kp-table td.r { text-align: right; font-weight: 500; color: #0f172a; }
+  .kp-table tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+
+  /* Terms and Total Summary Cards */
+  .kp-summary-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1.7fr;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: stretch;
+  }
+  .kp-info-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px 6px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .kp-info-label {
+    font-size: 8px;
+    font-weight: 800;
+    color: #206774;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+    line-height: 1.2;
+  }
+  .kp-info-val {
+    font-size: 11px;
+    font-weight: 500;
+    color: #0f172a;
+  }
+
+  .kp-total-card {
+    background: #e3f2f6;
+    border: 1px solid #bce1eb;
+    border-radius: 6px;
+    padding: 8px 14px;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .kp-total-label {
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #206774;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .kp-total-val {
+    font-size: 40px;
+    font-weight: 500;
+    color: #206774;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  /* Benefits Image Bar */
+  .kp-benefits-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    margin-bottom: 12px;
+    background: transparent;
+  }
+
+  /* Footer Quote & Watermark */
+  .kp-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    position: relative;
+    background: transparent;
+  }
+  .kp-quote-left {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    max-width: 600px;
+  }
+  .kp-quote-mark {
+    font-size: 40px;
+    line-height: 0.75;
+    color: #cbd5e1;
+    font-family: Georgia, serif;
+    font-weight: 900;
+  }
+  .kp-quote-text {
+    font-size: 8.8px;
+    color: #475569;
+    line-height: 1.4;
+  }
+  .kp-quote-text b {
+    color: #206774;
+    font-size: 9.8px;
+  }
+  .kp-watermark-icon {
+    width: 28px;
+    height: auto;
+    opacity: 0.55;
+    background: transparent;
+  }
+</style>
+</head>
+<body>
+
+<div class="a4-page" id="kpExportPage">
+  
+  <div>
+    <!-- Top Header -->
+    <div class="kp-header">
+      <img src="logo.png" class="kp-logo" alt="GlassLoft">
+      
+      <div class="kp-contacts">
+        <div class="kp-contact-row">
+          <img src="kp_icon_tel.png" class="kp-icon-img" alt="Телефон">
+          <div class="kp-phones">
+            <div>8-931-239-23-29</div>
+            <div>8-950-222-28-82</div>
+            <div>8-999-210-85-55</div>
+          </div>
+        </div>
+        <div class="kp-contact-row">
+          <img src="kp_icon_email.png" class="kp-icon-img" alt="Email">
+          <div>lanseloft@yandex.ru</div>
+        </div>
+        <div class="kp-contact-row">
+          <img src="kp_icon_address.png" class="kp-icon-img" alt="Адрес">
+          <div>Санкт-Петербург, ул. Мурзинская, 11</div>
+        </div>
+      </div>
+
+      <div class="kp-title-block">
+        <div class="kp-title">Коммерческое предложение</div>
+        <div class="kp-num">№ 1/25082026</div>
+        <div class="kp-date">25.08.2026</div>
+      </div>
+    </div>
+
+    <!-- 3 Photos Gallery -->
+    <div class="kp-gallery">
+      <div class="kp-gal-item">
+        <img src="kp_photo_1.jpg" class="kp-gal-img" alt="Интерьер">
+        <div class="kp-gal-info">
+          <div class="kp-gal-label">Адрес объекта</div>
+          <div class="kp-gal-val">г. Санкт-Петербург</div>
+        </div>
+      </div>
+      <div class="kp-gal-item">
+        <img src="kp_photo_2.jpg" class="kp-gal-img" alt="Интерьер">
+        <div class="kp-gal-info">
+          <div class="kp-gal-label">Заказчик</div>
+          <div class="kp-gal-val">Частное лицо</div>
+        </div>
+      </div>
+      <div class="kp-gal-item">
+        <img src="kp_photo_3.jpg" class="kp-gal-img full" alt="Ограждение лестницы">
+      </div>
+    </div>
+
+    <!-- Section Title -->
+    <div class="kp-sec-title">1. Наименование изделия</div>
+    <div class="kp-item-title">Стеклянное ограждение лестницы</div>
+
+    <!-- Table -->
+    <table class="kp-table">
+      <thead>
+        <tr>
+          <th style="width:46%">Наименование</th>
+          <th class="c" style="width:12%">Ед. изм</th>
+          <th class="c" style="width:10%">Кол-во</th>
+          <th class="r" style="width:16%">Стоимость ед. ₽</th>
+          <th class="r" style="width:16%">Общая стоимость ₽</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Стекло закаленное</b> Классическое прозрачное, 10 мм (трапеции: 16.88 м², прямоуг.: 6.25 м²)</td>
+          <td class="c">компл.</td>
+          <td class="c">1</td>
+          <td class="r">257 000 ₽</td>
+          <td class="r">257 000 ₽</td>
+        </tr>
+        <tr>
+          <td><b>Комплект фурнитуры</b> (стойки 40х40х400 4 шт)</td>
+          <td class="c">компл.</td>
+          <td class="c">1</td>
+          <td class="r">18 000 ₽</td>
+          <td class="r">18 000 ₽</td>
+        </tr>
+        <tr>
+          <td>Доставка, разгрузка</td>
+          <td class="c">компл.</td>
+          <td class="c">1</td>
+          <td class="r">7 500 ₽</td>
+          <td class="r">7 500 ₽</td>
+        </tr>
+        <tr>
+          <td>Монтажные работы</td>
+          <td class="c">компл.</td>
+          <td class="c">1</td>
+          <td class="r">35 000 ₽</td>
+          <td class="r">35 000 ₽</td>
+        </tr>
+        <tr>
+          <td>Изготовление чертежей</td>
+          <td class="c">компл.</td>
+          <td class="c">1</td>
+          <td class="r">бесплатно</td>
+          <td class="r">0 ₽</td>
+        </tr>
+        <tr>
+          <td>Изготовление схемы</td>
+          <td class="c">компл.</td>
+          <td class="c">1</td>
+          <td class="r">бесплатно</td>
+          <td class="r">0 ₽</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Option Note (Wooden Rail) -->
+    <div style="font-size:9.5px;font-weight:700;color:#206774;margin-bottom:8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:5px 8px;">
+      Дополнительная опция: Деревянный поручень 40×40, масло с воском (15 м.пог.) — 75 000 ₽
+    </div>
+
+    <!-- Terms and Total Summary Cards -->
+    <div class="kp-summary-row">
+      <div class="kp-info-card">
+        <div class="kp-info-label">Срок изготовления</div>
+        <div class="kp-info-val">21 раб. день</div>
+      </div>
+      <div class="kp-info-card">
+        <div class="kp-info-label">Предложение действительно до</div>
+        <div class="kp-info-val">04.09.2026</div>
+      </div>
+      <div class="kp-info-card">
+        <div class="kp-info-label">Сумма предоплаты</div>
+        <div class="kp-info-val">50%</div>
+      </div>
+      <div class="kp-total-card">
+        <div class="kp-total-label">Итого общая стоимость (без НДС)</div>
+        <div class="kp-total-val">317 500 ₽</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <!-- Benefits Image Bar (regalii.png) -->
+    <img src="kp_benefits.png" class="kp-benefits-img" alt="Преимущества GlassLoft">
+
+    <!-- Footer Quote & Watermark -->
+    <div class="kp-footer">
+      <div class="kp-quote-left">
+        <div class="kp-quote-mark">“</div>
+        <div class="kp-quote-text">
+          Выражаем благодарность за обращение к нам.<br>
+          Мы ценим время и внимание, которое Вы уделили нашей компании, и хотим выразить наше искреннее уважение.<br>
+          <b>Будем рады сотрудничеству!</b>
+        </div>
+      </div>
+      <img src="kp_watermark.png" class="kp-watermark-icon" alt="GlassLoft">
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
