@@ -22,6 +22,7 @@ const DEF = {
     { name: "Стойки 40х40х400", price: 4500, unit: "шт" }
   ],
   rail: [
+    { name: "Без поручня", price: 0 },
     { name: "Деревянный поручень 40×40, масло с воском", price: 5000 },
     { name: "Деревянный поручень 40×40, эмаль однотонная (белый/чёрный)", price: 6000 },
     { name: "Деревянный поручень 40×40, покрытие по образцу заказчика", price: 6500 },
@@ -74,8 +75,8 @@ if (!loadFromURL()) {
 let M = D.misc;
 let termManual = false;
 const el = id => document.getElementById(id);
-const val = id => { const v = el(id).value.trim(); return v === '' ? null : (parseFloat(v) || 0); };
-const num = id => parseFloat(el(id).value) || 0;
+const val = id => { const v = String(el(id).value || '').trim().replace(',', '.'); return v === '' ? null : (parseFloat(v) || 0); };
+const num = id => parseFloat(String(el(id).value || '').replace(',', '.')) || 0;
 const fmt = n => Math.round(n).toLocaleString('ru-RU');
 const rub = n => fmt(n) + ' ₽';
 const esc = s => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -107,7 +108,7 @@ function buildRailSelect() {
   D.rail.forEach(item => {
     const o = document.createElement('option');
     o.value = item.name;
-    o.textContent = item.name + ' — ' + fmt(item.price) + ' ₽/м.пог';
+    o.textContent = item.price > 0 ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name;
     s.appendChild(o);
   });
   if ([...s.options].some(o => o.value === prev)) s.value = prev;
@@ -252,6 +253,30 @@ function addService() {
   buildServiceList(); renderServiceSettings(); autoSave(); calc();
 }
 
+function calcFromLength() {
+  const tLenStr = el('trapLen').value.trim().replace(',', '.');
+  if (tLenStr !== '') {
+    const tLen = parseFloat(tLenStr) || 0;
+    // Длина м.пог. умножить на 1,25 и плюс 35%
+    const trapM2 = tLen > 0 ? +(tLen * 1.25 * 1.35).toFixed(2) : 0;
+    el('trapArea').value = trapM2 > 0 ? trapM2 : '';
+  } else {
+    el('trapArea').value = '';
+  }
+
+  const rLenStr = el('rectLen').value.trim().replace(',', '.');
+  if (rLenStr !== '') {
+    const rLen = parseFloat(rLenStr) || 0;
+    // Длина м.пог. умножить на 1,25
+    const rectM2 = rLen > 0 ? +(rLen * 1.25).toFixed(2) : 0;
+    el('rectArea').value = rectM2 > 0 ? rectM2 : '';
+  } else {
+    el('rectArea').value = '';
+  }
+
+  calc();
+}
+
 function calc() {
   const gName = el('glass').value;
   const g = D.glass[gName] || { trap: 0, rect: 0 };
@@ -260,8 +285,12 @@ function calc() {
   el('glassHint').textContent = `Трапеции — ${fmt(g.trap)} ₽/м² · Прямоугольники — ${fmt(g.rect)} ₽/м²`;
   const trapA = val('trapArea') || 0;
   const rectA = val('rectArea') || 0;
-  const glassSum = trapA * g.trap + rectA * g.rect;
+  
+  // 1. Стекло (с округлением до 500 ₽)
+  const rawGlassSum = trapA * g.trap + rectA * g.rect;
+  const glassSum = roundUp500(rawGlassSum);
 
+  // 2. Фурнитура и поручень (с округлением до 500 ₽)
   const parts = [];
   let hardSum = 0;
   document.querySelectorAll('.hardQty').forEach(inp => {
@@ -284,13 +313,51 @@ function calc() {
   const railItem = D.rail.find(r => r.name === railName) || { price: 0 };
   const railLength = val('railLength');
   const railManual = val('railManual');
-  let railSum = 0;
-  if (railManual !== null) railSum = railManual;
-  else if (railLength !== null) railSum = railLength * railItem.price;
-  if (railSum > 0 || (railLength !== null && railLength > 0)) {
-    parts.push(railName.toLowerCase() + (railLength ? ` ${railLength} м.пог` : ''));
+  const isWoodenRail = /деревянн/i.test(railName) && !/без поручня/i.test(railName);
+
+  let rawRailSum = 0;
+  if (railManual !== null) rawRailSum = railManual;
+  else if (railLength !== null) rawRailSum = railLength * railItem.price;
+  const railSumRound = roundUp500(rawRailSum);
+
+  const railHintEl = el('railHint');
+  if (railHintEl) {
+    if (isWoodenRail) {
+      railHintEl.textContent = 'Деревянный поручень не входит в комплект фурнитуры и выносится в КП отдельной строкой после итоговой суммы.';
+    } else if (/без поручня/i.test(railName)) {
+      railHintEl.textContent = 'Поручень не выбран.';
+    } else {
+      railHintEl.textContent = 'Поручень включается в состав комплекта фурнитуры.';
+    }
   }
 
+  // Если поручень НЕ деревянный (например, металлический/алюминиевый профиль), он входит в комплект фурнитуры
+  if (!isWoodenRail && !/без поручня/i.test(railName)) {
+    if (rawRailSum > 0 || (railLength !== null && railLength > 0)) {
+      parts.push(railName.toLowerCase() + (railLength ? ` ${railLength} м.пог` : ''));
+      hardSum += rawRailSum;
+    }
+  }
+
+  const rawHardwareTotal = hardSum;
+  const hardwareTotal = roundUp500(rawHardwareTotal);
+
+  // 3. Доставка (с округлением до 500 ₽)
+  const rawDelSum = el('delOn').checked ? num('delPrice') : 0;
+  const delSum = roundUp500(rawDelSum);
+
+  // 4. Монтажные работы (с округлением до 500 ₽)
+  const mode = el('instMode').value;
+  el('instFixWrap').style.display = mode === 'fix' ? 'block' : 'none';
+  el('instPctWrap').style.display = mode === 'pct' ? 'block' : 'none';
+  const base1_4 = glassSum + hardwareTotal;
+  let rawInstSum = 0;
+  if (el('instOn').checked) {
+    rawInstSum = mode === 'fix' ? num('instFix') : (base1_4 * num('instPct') / 100);
+  }
+  const instSum = roundUp500(rawInstSum);
+
+  // 5. Дополнительные услуги (каждая с округлением до 500 ₽)
   let servSum = 0;
   const servLines = [];
   document.querySelectorAll('.servPrice').forEach(inp => {
@@ -299,23 +366,16 @@ function calc() {
     if (!s) return;
     const v = inp.value.trim() === '' ? null : (parseFloat(inp.value) || 0);
     if (v !== null && v > 0) {
-      servSum += v;
-      servLines.push(`${s.name} — ${rub(v)}`);
+      const roundedV = roundUp500(v);
+      servSum += roundedV;
+      servLines.push(`${s.name} — ${rub(roundedV)}`);
     } else if (s.emptyDefault === 'free') {
       servLines.push(`${s.name} — бесплатно`);
     }
   });
 
-  const delSum = el('delOn').checked ? num('delPrice') : 0;
-  const mode = el('instMode').value;
-  el('instFixWrap').style.display = mode === 'fix' ? 'block' : 'none';
-  el('instPctWrap').style.display = mode === 'pct' ? 'block' : 'none';
-  const base1_4 = glassSum + hardSum + railSum;
-  let instSum = 0;
-  if (el('instOn').checked) instSum = mode === 'fix' ? num('instFix') : base1_4 * num('instPct') / 100;
-
-  const rawTotal = glassSum + hardSum + railSum + delSum + instSum + servSum;
-  const total = roundUp500(rawTotal);
+  // Итоговая сумма складывается из округлённых сумм всех пунктов КП (без деревянного поручня)
+  const total = glassSum + hardwareTotal + delSum + instSum + servSum;
 
   el('sum').textContent = rub(total);
 
@@ -328,13 +388,23 @@ function calc() {
   t += `1. Стекло закаленное ${gName} — ${rub(glassSum)}\n`;
   t += `2. Комплект фурнитуры`;
   if (parts.length) t += ` (${parts.join(', ')})`;
-  t += ` — ${rub(hardSum + railSum)}\n`;
-  t += `3. Доставка, разгрузка — ${delSum > 0 ? rub(delSum) : 'не требуется'}\n`;
-  t += `4. Монтажные работы — ${instSum > 0 ? rub(instSum) : 'не требуются'}\n`;
+  t += ` — ${rub(hardwareTotal)}\n`;
+  t += `3. Доставка, разгрузка — ${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}\n`;
+  t += `4. Монтажные работы — ${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : 'не требуются'}\n`;
   let counter = 5;
   servLines.forEach(line => { t += `${counter++}. ${line}\n`; });
   t += `\nИтого общая стоимость — ${fmt(total)} рублей.\n`;
   t += `Срок изготовления — ${num('termDays')} рабочих дней.`;
+
+  // Деревянный поручень выносится отдельной строкой в самый конец после Итоговой суммы
+  if (isWoodenRail) {
+    if (railSumRound > 0) {
+      t += `\n\nЕсли потребуется деревянный поручень поверх стекла: ${railName}${railLength ? ` (${railLength} м.пог.)` : ''} — ${rub(railSumRound)}.`;
+    } else {
+      t += `\n\nЕсли потребуется деревянный поручень поверх стекла: ${railName} — ${fmt(railItem.price)} ₽/м.пог.`;
+    }
+  }
+
   el('quoteText').textContent = t;
 }
 

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="20" y1="20" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="60%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="25" y1="15" x2="65" y2="55" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="loft" x1="45" y1="45" x2="85" y2="85" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="24" fill="url(#bg)"/>
+  <path d="M72 32C66.5 24.5 57.5 20 48 20C32.5 20 20 32.5 20 48C20 63.5 32.5 76 48 76C63.5 76 76 63.5 76 48H48V59H64C61 64.5 55 67.5 48 67.5C37.2 67.5 28.5 58.8 28.5 48C28.5 37.2 37.2 28.5 48 28.5C54.8 28.5 61 31.8 64.8 37.2L72 32Z" fill="url(#glass)"/>
+  <path d="M28.5 48C28.5 37.2 37.2 28.5 48 28.5C54.8 28.5 61 31.8 64.8 37.2L72 32C66.5 24.5 57.5 20 48 20C32.5 20 20 32.5 20 48C20 53.2 21.4 58 23.9 62.1L31.8 54.2C29.7 52.4 28.5 50.3 28.5 48Z" fill="url(#shine)"/>
+  <rect x="48" y="47" width="28" height="9" rx="4.5" fill="url(#loft)"/>
+</svg>
