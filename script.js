@@ -442,29 +442,23 @@ function calc() {
   const railItem = D.rail.find(r => r.name === railName) || { price: 0 };
   const railLength = val('railLength');
   const railManual = val('railManual');
-  const isWoodenRail = /деревянн/i.test(railName) && !/без поручня/i.test(railName);
+  const hasRail = railName !== 'Без поручня' && !/без поручня/i.test(railName) && ((railLength !== null && railLength > 0) || (railManual !== null && railManual > 0));
 
   let rawRailSum = 0;
-  if (railManual !== null) rawRailSum = railManual;
-  else if (railLength !== null) rawRailSum = railLength * railItem.price;
+  if (hasRail) {
+    if (railManual !== null) rawRailSum = railManual;
+    else if (railLength !== null) rawRailSum = railLength * railItem.price;
+  }
   const railSumRound = roundUp500(rawRailSum);
 
   const railHintEl = el('railHint');
   if (railHintEl) {
-    if (isWoodenRail) {
-      railHintEl.textContent = 'Деревянный поручень не входит в комплект фурнитуры и выносится в КП отдельной строкой после итоговой суммы.';
+    if (hasRail) {
+      railHintEl.textContent = 'Поручень включён в расчёт и выводится отдельным пунктом в КП.';
     } else if (/без поручня/i.test(railName)) {
       railHintEl.textContent = 'Поручень не выбран.';
     } else {
-      railHintEl.textContent = 'Поручень включается в состав комплекта фурнитуры.';
-    }
-  }
-
-  // Если поручень НЕ деревянный (например, металлический/алюминиевый профиль), он входит в комплект фурнитуры
-  if (!isWoodenRail && !/без поручня/i.test(railName)) {
-    if (rawRailSum > 0 || (railLength !== null && railLength > 0)) {
-      parts.push(railName.toLowerCase() + (railLength ? ` ${railLength} м.пог` : ''));
-      hardSum += rawRailSum;
+      railHintEl.textContent = 'Укажите длину поручня для включения в смету.';
     }
   }
 
@@ -479,7 +473,7 @@ function calc() {
   const mode = el('instMode').value;
   el('instFixWrap').style.display = mode === 'fix' ? 'block' : 'none';
   el('instPctWrap').style.display = mode === 'pct' ? 'block' : 'none';
-  const base1_4 = glassSum + hardwareTotal;
+  const base1_4 = glassSum + hardwareTotal + (hasRail ? railSumRound : 0);
   let rawInstSum = 0;
   if (el('instOn').checked) {
     rawInstSum = mode === 'fix' ? num('instFix') : (base1_4 * num('instPct') / 100);
@@ -503,8 +497,8 @@ function calc() {
     }
   });
 
-  // Итоговая сумма складывается из округлённых сумм всех пунктов КП (без деревянного поручня)
-  const total = glassSum + hardwareTotal + delSum + instSum + servSum;
+  // Итоговая сумма складывается из всех пунктов сметы (включая поручень)
+  const total = glassSum + hardwareTotal + (hasRail ? railSumRound : 0) + delSum + instSum + servSum;
 
   el('sum').textContent = rub(total);
   const floatEl = el('floatingSum');
@@ -516,25 +510,22 @@ function calc() {
     : (/триплекс/i.test(gName) ? 'Авто: триплекс — ' + M.termTripl + ' раб. дней' : 'Авто: стекло 10 мм — ' + M.termGlass + ' раб. дней');
 
   let t = 'Стоимость ограждения будет следующей:\n\n';
-  t += `1. Стекло закаленное ${gName} — ${rub(glassSum)}\n`;
-  t += `2. Комплект фурнитуры`;
+  let counter = 1;
+  t += `${counter++}. Стекло закаленное ${gName} — ${rub(glassSum)}\n`;
+  t += `${counter++}. Комплект фурнитуры`;
   if (parts.length) t += ` (${parts.join(', ')})`;
   t += ` — ${rub(hardwareTotal)}\n`;
-  t += `3. Доставка, разгрузка — ${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}\n`;
-  t += `4. Монтажные работы — ${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : 'не требуются'}\n`;
-  let counter = 5;
+
+  if (hasRail) {
+    t += `${counter++}. Поручень: ${railName}${railLength ? ` (${railLength} м.пог.)` : ''} — ${rub(railSumRound)}\n`;
+  }
+
+  t += `${counter++}. Доставка, разгрузка — ${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}\n`;
+  t += `${counter++}. Монтажные работы — ${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : 'не требуются'}\n`;
+  
   servLines.forEach(line => { t += `${counter++}. ${line}\n`; });
   t += `\nИтого общая стоимость — ${fmt(total)} рублей.\n`;
   t += `Срок изготовления — ${num('termDays')} рабочих дней.`;
-
-  // Деревянный поручень выносится отдельной строкой в самый конец после Итоговой суммы
-  if (isWoodenRail) {
-    if (railSumRound > 0) {
-      t += `\n\nЕсли потребуется деревянный поручень поверх стекла: ${railName}${railLength ? ` (${railLength} м.пог.)` : ''} — ${rub(railSumRound)}.`;
-    } else {
-      t += `\n\nЕсли потребуется деревянный поручень поверх стекла: ${railName} — ${fmt(railItem.price)} ₽/м.пог.`;
-    }
-  }
 
   el('quoteText').textContent = t;
 }
@@ -676,19 +667,14 @@ function updateKpDocumentData() {
   const railItem = D.rail.find(r => r.name === railName) || { price: 0 };
   const railLength = val('railLength');
   const railManual = val('railManual');
-  const isWoodenRail = /деревянн/i.test(railName) && !/без поручня/i.test(railName);
+  const hasRail = railName !== 'Без поручня' && !/без поручня/i.test(railName) && ((railLength !== null && railLength > 0) || (railManual !== null && railManual > 0));
 
   let rawRailSum = 0;
-  if (railManual !== null) rawRailSum = railManual;
-  else if (railLength !== null) rawRailSum = railLength * railItem.price;
-  const railSumRound = roundUp500(rawRailSum);
-
-  if (!isWoodenRail && !/без поручня/i.test(railName)) {
-    if (rawRailSum > 0 || (railLength !== null && railLength > 0)) {
-      parts.push(railName.toLowerCase() + (railLength ? ` ${railLength} м.пог` : ''));
-      hardSum += rawRailSum;
-    }
+  if (hasRail) {
+    if (railManual !== null) rawRailSum = railManual;
+    else if (railLength !== null) rawRailSum = railLength * railItem.price;
   }
+  const railSumRound = roundUp500(rawRailSum);
 
   const rawHardwareTotal = hardSum;
   const hardwareTotal = roundUp500(rawHardwareTotal);
@@ -697,7 +683,7 @@ function updateKpDocumentData() {
   const delSum = roundUp500(rawDelSum);
 
   const mode = el('instMode').value;
-  const base1_4 = glassSum + hardwareTotal;
+  const base1_4 = glassSum + hardwareTotal + (hasRail ? railSumRound : 0);
   let rawInstSum = 0;
   if (el('instOn').checked) {
     rawInstSum = mode === 'fix' ? num('instFix') : (base1_4 * num('instPct') / 100);
@@ -720,19 +706,19 @@ function updateKpDocumentData() {
     }
   });
 
-  const total = glassSum + hardwareTotal + delSum + instSum + servSum;
+  const total = glassSum + hardwareTotal + (hasRail ? railSumRound : 0) + delSum + instSum + servSum;
 
   if (el('kpDocTotal')) el('kpDocTotal').textContent = rub(total);
   if (el('kpDocTerm')) el('kpDocTerm').textContent = `${num('termDays')} раб. дней`;
   if (el('kpDocExpire')) el('kpDocExpire').textContent = dates.expStr;
 
-  // Build table rows
+  // Build table rows without any bold tags
   let rowsHtml = '';
   
   // 1. Стекло
   const glassDesc = `Стекло закаленное ${gName}${trapA > 0 ? ` (трапеции: ${trapA} м²)` : ''}${rectA > 0 ? ` (прямоуг.: ${rectA} м²)` : ''}`;
   rowsHtml += `<tr>
-    <td><b>${glassDesc}</b></td>
+    <td>${glassDesc}</td>
     <td class="c">компл.</td>
     <td class="c">1</td>
     <td class="r">${rub(glassSum)}</td>
@@ -742,14 +728,26 @@ function updateKpDocumentData() {
   // 2. Комплект фурнитуры
   const hardDesc = `Комплект фурнитуры${parts.length ? ` (${parts.join(', ')})` : ''}`;
   rowsHtml += `<tr>
-    <td><b>${hardDesc}</b></td>
+    <td>${hardDesc}</td>
     <td class="c">компл.</td>
     <td class="c">1</td>
     <td class="r">${rub(hardwareTotal)}</td>
     <td class="r">${rub(hardwareTotal)}</td>
   </tr>`;
 
-  // 3. Доставка
+  // 3. Поручень (отдельным пунктом)
+  if (hasRail) {
+    const railDesc = `Поручень: ${railName}${railLength ? ` (${railLength} м.пог.)` : ''}`;
+    rowsHtml += `<tr>
+      <td>${railDesc}</td>
+      <td class="c">компл.</td>
+      <td class="c">1</td>
+      <td class="r">${rub(railSumRound)}</td>
+      <td class="r">${rub(railSumRound)}</td>
+    </tr>`;
+  }
+
+  // 4. Доставка
   const delDesc = 'Доставка, разгрузка';
   rowsHtml += `<tr>
     <td>${delDesc}</td>
@@ -759,7 +757,7 @@ function updateKpDocumentData() {
     <td class="r">${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : '0 ₽'}</td>
   </tr>`;
 
-  // 4. Монтаж
+  // 5. Монтаж
   const instDesc = 'Монтажные работы';
   rowsHtml += `<tr>
     <td>${instDesc}</td>
@@ -769,7 +767,7 @@ function updateKpDocumentData() {
     <td class="r">${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : '0 ₽'}</td>
   </tr>`;
 
-  // 5. Доп. услуги
+  // 6. Доп. услуги
   servRows.forEach(sr => {
     rowsHtml += `<tr>
       <td>${sr.name}</td>
@@ -782,20 +780,8 @@ function updateKpDocumentData() {
 
   if (el('kpDocTableBody')) el('kpDocTableBody').innerHTML = rowsHtml;
 
-  // Wooden Handrail Note
   const railOptEl = el('kpDocRailOption');
-  if (railOptEl) {
-    if (isWoodenRail) {
-      if (railSumRound > 0) {
-        railOptEl.textContent = `Дополнительная опция: ${railName}${railLength ? ` (${railLength} м.пог.)` : ''} — ${rub(railSumRound)}`;
-      } else {
-        railOptEl.textContent = `Дополнительная опция: ${railName} — ${fmt(railItem.price)} ₽/м.пог.`;
-      }
-      railOptEl.style.display = 'block';
-    } else {
-      railOptEl.style.display = 'none';
-    }
-  }
+  if (railOptEl) railOptEl.style.display = 'none';
 }
 
 function openKpSettingsModal() {
