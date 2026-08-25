@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Коммерческое предложение — GlassLoft</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   @page {
     size: A4 portrait;
@@ -64,10 +64,17 @@
   }
   .kp-icon-img {
     width: 14px;
-    height: 14px;
+    height: auto;
+    max-height: 14px;
     object-fit: contain;
     margin-top: 2px;
     flex-shrink: 0;
+  }
+  .kp-icon-img.email-icon {
+    width: 14px;
+    height: auto;
+    max-height: 10px;
+    margin-top: 3px;
   }
   .kp-phones {
     display: flex;
@@ -75,38 +82,38 @@
     line-height: 1.25;
     white-space: nowrap;
     font-size: 10.5px;
-    font-weight: 600;
+    font-weight: 500;
   }
   .kp-title-block {
     text-align: right;
     flex-shrink: 0;
   }
   .kp-title {
-    font-size: 17px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: 600;
     color: #206774;
     letter-spacing: 0.02em;
     margin-bottom: 3px;
     text-transform: uppercase;
   }
   .kp-num {
-    font-size: 10.5px;
-    font-weight: 600;
+    font-size: 10px;
+    font-weight: 500;
     color: #222;
     margin-bottom: 2px;
   }
   .kp-date {
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 500;
     color: #444;
   }
 
-  /* 3 Photos Gallery */
+  /* 3 Photos Gallery (Exact PDF Proportions) */
   .kp-gallery {
     display: grid;
-    grid-template-columns: 1.15fr 1.15fr 1.35fr;
-    gap: 2px;
-    height: 160px;
+    grid-template-columns: 286px 164px 278px;
+    gap: 1px;
+    height: 235px;
     margin-bottom: 12px;
   }
   .kp-gal-item {
@@ -116,35 +123,33 @@
     background: #f4f4f4;
     border-radius: 2px;
     overflow: hidden;
-    border: 1px solid #e2e8f0;
   }
   .kp-gal-img {
     width: 100%;
-    height: 115px;
+    height: 155px;
     object-fit: cover;
   }
   .kp-gal-img.full {
     height: 100%;
   }
   .kp-gal-info {
-    padding: 4px 8px;
+    padding: 6px 10px;
     background: #ffffff;
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    border-top: 1px solid #e2e8f0;
   }
   .kp-gal-label {
-    font-size: 8px;
+    font-size: 8.5px;
     color: #000000;
-    font-weight: 800;
+    font-weight: 700;
     text-transform: uppercase;
-    margin-bottom: 1px;
+    margin-bottom: 2px;
     letter-spacing: 0.03em;
   }
   .kp-gal-val {
-    font-size: 9.5px;
+    font-size: 10px;
     font-weight: 500;
     color: #333333;
   }
@@ -152,7 +157,7 @@
   /* Section Title */
   .kp-sec-title {
     font-size: 10.5px;
-    font-weight: 800;
+    font-weight: 600;
     color: #206774;
     text-transform: uppercase;
     margin: 0 0 2px;
@@ -160,7 +165,7 @@
   }
   .kp-item-title {
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 600;
     color: #111;
     margin-bottom: 6px;
   }
@@ -175,7 +180,7 @@
     background: #e4f1f4;
     color: #206774;
     font-size: 9px;
-    font-weight: 800;
+    font-weight: 700;
     text-transform: uppercase;
     padding: 6px 8px;
     text-align: left;
@@ -192,8 +197,8 @@
     border-bottom: 1px solid #e2e8f0;
     vertical-align: middle;
   }
-  .kp-table td.c { text-align: center; font-weight: 500; color: #475569; }
-  .kp-table td.r { text-align: right; font-weight: 500; color: #0f172a; }
+  .kp-table td.c { text-align: center; font-weight: 400; color: #475569; }
+  .kp-table td.r { text-align: right; font-weight: 400; color: #0f172a; }
   .kp-table tr:nth-child(even) td {
     background: #f8fafc;
   }
@@ -201,7 +206,7 @@
   /* Terms and Total Summary Cards */
   .kp-summary-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1.7fr;
+    grid-template-columns: 1fr 1fr 1fr 1.65fr;
     gap: 8px;
     margin-bottom: 12px;
     align-items: stretch;
@@ -218,7 +223,7 @@
   }
   .kp-info-label {
     font-size: 8px;
-    font-weight: 800;
+    font-weight: 700;
     color: #206774;
     text-transform: uppercase;
     margin-bottom: 3px;
@@ -226,7 +231,7 @@
   }
   .kp-info-val {
     font-size: 11px;
-    font-weight: 500;
+    font-weight: 400;
     color: #0f172a;
   }
 
@@ -234,7 +239,7 @@
     background: #e3f2f6;
     border: 1px solid #bce1eb;
     border-radius: 6px;
-    padding: 8px 14px;
+    padding: 8px 12px;
     text-align: right;
     display: flex;
     flex-direction: column;
@@ -242,17 +247,17 @@
   }
   .kp-total-label {
     font-size: 8.5px;
-    font-weight: 800;
+    font-weight: 700;
     color: #206774;
     text-transform: uppercase;
     margin-bottom: 2px;
   }
   .kp-total-val {
-    font-size: 40px;
+    font-size: 26px;
     font-weight: 500;
     color: #206774;
-    line-height: 1;
-    letter-spacing: -0.03em;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
   }
 
   /* Benefits Image Bar */
@@ -323,7 +328,7 @@
           </div>
         </div>
         <div class="kp-contact-row">
-          <img src="kp_icon_email.png" class="kp-icon-img" alt="Email">
+          <img src="kp_icon_email.png" class="kp-icon-img email-icon" alt="Email">
           <div>lanseloft@yandex.ru</div>
         </div>
         <div class="kp-contact-row">
@@ -339,7 +344,7 @@
       </div>
     </div>
 
-    <!-- 3 Photos Gallery -->
+    <!-- 3 Photos Gallery (1px Gap, Square Right Photo) -->
     <div class="kp-gallery">
       <div class="kp-gal-item">
         <img src="kp_photo_1.jpg" class="kp-gal-img" alt="Интерьер">
@@ -377,14 +382,14 @@
       </thead>
       <tbody>
         <tr>
-          <td><b>Стекло закаленное</b> Классическое прозрачное, 10 мм (трапеции: 16.88 м², прямоуг.: 6.25 м²)</td>
+          <td>Стекло закаленное Классическое прозрачное, 10 мм (трапеции: 16.88 м², прямоуг.: 6.25 м²)</td>
           <td class="c">компл.</td>
           <td class="c">1</td>
           <td class="r">257 000 ₽</td>
           <td class="r">257 000 ₽</td>
         </tr>
         <tr>
-          <td><b>Комплект фурнитуры</b> (стойки 40х40х400 4 шт)</td>
+          <td>Комплект фурнитуры (стойки 40х40х400 4 шт)</td>
           <td class="c">компл.</td>
           <td class="c">1</td>
           <td class="r">18 000 ₽</td>
@@ -422,7 +427,7 @@
     </table>
 
     <!-- Option Note (Wooden Rail) -->
-    <div style="font-size:9.5px;font-weight:700;color:#206774;margin-bottom:8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:5px 8px;">
+    <div style="font-size:9.5px;font-weight:600;color:#206774;margin-bottom:8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:5px 8px;">
       Дополнительная опция: Деревянный поручень 40×40, масло с воском (15 м.пог.) — 75 000 ₽
     </div>
 
