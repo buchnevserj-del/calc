@@ -537,6 +537,68 @@ function calc() {
   updateKpDocumentData();
 }
 
+let currentKpSeqNumber = null;
+
+async function fetchNextSequenceNumber() {
+  let localNum = parseInt(localStorage.getItem('glassloft_kp_seq_num') || '0', 10);
+  
+  // Атомарный глобальный счётчик через облачный API
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch('https://countapi.mileshilliard.com/api/v1/hit/glassloft_buchnev_seq_kp', {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.value === 'number') {
+        const cloudNum = data.value;
+        const finalNum = Math.max(cloudNum, localNum + 1);
+        localStorage.setItem('glassloft_kp_seq_num', String(finalNum));
+        currentKpSeqNumber = finalNum;
+        return finalNum;
+      }
+    }
+  } catch (e) {
+    console.warn('Using offline sequence counter', e);
+  }
+  
+  // Оффлайн-фоллбэк
+  localNum += 1;
+  localStorage.setItem('glassloft_kp_seq_num', String(localNum));
+  currentKpSeqNumber = localNum;
+  return localNum;
+}
+
+async function fetchCurrentSequenceNumber() {
+  if (currentKpSeqNumber !== null) return currentKpSeqNumber;
+  let localNum = parseInt(localStorage.getItem('glassloft_kp_seq_num') || '1', 10);
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch('https://countapi.mileshilliard.com/api/v1/get/glassloft_buchnev_seq_kp', {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.value === 'number') {
+        const cloudNext = data.value + 1;
+        const nextNum = Math.max(cloudNext, localNum);
+        currentKpSeqNumber = nextNum;
+        return nextNum;
+      }
+    }
+  } catch (e) {}
+  
+  currentKpSeqNumber = localNum;
+  return localNum;
+}
+
 function getFormattedDates() {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
@@ -555,10 +617,11 @@ function getFormattedDates() {
   return { dateStr, noDots, expStr };
 }
 
-function getKpFileName() {
+function getKpFileName(forcedDocNum) {
   const dates = getFormattedDates();
-  const docNum = (el('custDocNum') && el('custDocNum').value.trim()) || '1';
-  const docNumClean = docNum.replace(/[^a-zA-Z0-9]/g, '');
+  const customDocNum = (el('custDocNum') && el('custDocNum').value.trim());
+  const seqNum = forcedDocNum || currentKpSeqNumber || 1;
+  const docNum = customDocNum ? customDocNum.replace(/[^a-zA-Z0-9]/g, '') : `${seqNum}`;
   
   const rawAddr = (el('calcAddress') && el('calcAddress').value.trim()) || 'г. Санкт-Петербург';
   const addrClean = rawAddr
@@ -567,15 +630,18 @@ function getKpFileName() {
     .replace(/^_+|_+$/g, '');
     
   // Формат: КП_порядковый номер-дата без точек, запятых и тире_адрес объекта
-  return `КП_${docNumClean}-${dates.noDots}_${addrClean || 'объект'}`;
+  return `КП_${docNum}-${dates.noDots}_${addrClean || 'объект'}`;
 }
 
-function updateKpDocumentData() {
+function updateKpDocumentData(forcedDocNum) {
   const dates = getFormattedDates();
   
   const clientVal = (el('calcClient') && el('calcClient').value.trim()) || 'Частное лицо';
   const addressVal = (el('calcAddress') && el('calcAddress').value.trim()) || 'г. Санкт-Петербург';
-  const docNumVal = (el('custDocNum') && el('custDocNum').value.trim()) || `1/${dates.noDots}`;
+  
+  const customDocNum = (el('custDocNum') && el('custDocNum').value.trim());
+  const seqNum = forcedDocNum || currentKpSeqNumber || 1;
+  const docNumVal = customDocNum || `${seqNum}/${dates.noDots}`;
   const prepayVal = (el('custPrepay') && el('custPrepay').value.trim()) || '50%';
   
   if (el('kpDocNum')) el('kpDocNum').textContent = `№ ${docNumVal}`;
@@ -749,7 +815,10 @@ function copyQuote() {
 
 async function sharePDF() {
   showToast('Формирование PDF для отправки... ⏳');
-  updateKpDocumentData();
+  
+  // Атомарно инкрементируем порядковый номер перед отправкой
+  const seqNum = await fetchNextSequenceNumber();
+  updateKpDocumentData(seqNum);
 
   const element = document.getElementById('kpExportPage');
   if (!element) return;
@@ -763,7 +832,7 @@ async function sharePDF() {
       logging: false
     });
 
-    const filename = getKpFileName() + '.pdf';
+    const filename = getKpFileName(seqNum) + '.pdf';
     
     if (window.jspdf && window.jspdf.jsPDF) {
       const { jsPDF } = window.jspdf;
@@ -807,7 +876,10 @@ async function sharePDF() {
 
 async function exportKP(format) {
   showToast(`Формирование ${format.toUpperCase()}... ⏳`);
-  updateKpDocumentData();
+  
+  // Атомарно инкрементируем порядковый номер перед выгрузкой
+  const seqNum = await fetchNextSequenceNumber();
+  updateKpDocumentData(seqNum);
 
   const element = document.getElementById('kpExportPage');
   if (!element) return;
@@ -821,7 +893,7 @@ async function exportKP(format) {
       logging: false
     });
 
-    const baseName = getKpFileName();
+    const baseName = getKpFileName(seqNum);
 
     if (format === 'jpeg' || format === 'jpg') {
       const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
@@ -896,3 +968,4 @@ function buildAll() {
 buildAll();
 refreshMisc();
 calc();
+fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num));
