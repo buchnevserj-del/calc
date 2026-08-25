@@ -30,8 +30,8 @@ const DEF = {
     { name: "Алюминиевый П-профиль 15×15 на верхнюю кромку стекла", price: 3000 }
   ],
   services: [
-    { name: "Изготовление чертежей", emptyDefault: "free" },
-    { name: "Изготовление схемы", emptyDefault: "free" },
+    { name: "Изготовление чертежей", emptyDefault: "hide" },
+    { name: "Изготовление схемы", emptyDefault: "hide" },
     { name: "Порошковая окраска фурнитуры по RAL", emptyDefault: "hide" }
   ],
   misc: { delivery: 7500, instFix: 35000, instPct: 30, termGlass: 21, termTripl: 25, pin: '0120' }
@@ -81,13 +81,155 @@ let pendingModalId = null;
 let M = D.misc;
 let termManual = false;
 const el = id => document.getElementById(id);
-const val = id => { const v = String(el(id).value || '').trim().replace(',', '.'); return v === '' ? null : (parseFloat(v) || 0); };
-const num = id => parseFloat(String(el(id).value || '').replace(',', '.')) || 0;
+const val = id => { const v = String((el(id) && el(id).value) || '').trim().replace(',', '.'); return v === '' ? null : (parseFloat(v) || 0); };
+const num = id => parseFloat(String((el(id) && el(id).value) || '').replace(',', '.')) || 0;
 const fmt = n => Math.round(n).toLocaleString('ru-RU');
 const rub = n => fmt(n) + ' ₽';
 const esc = s => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
 const roundUp500 = n => n > 0 ? Math.ceil(n / 500) * 500 : 0;
+
+/* Multi-Section State */
+let sections = [
+  {
+    id: 1,
+    name: "Ограждение 1",
+    trapLen: "",
+    rectLen: "",
+    trapArea: "",
+    rectArea: "",
+    glass: "Классическое прозрачное (зеленоватая кромка), 10 мм",
+    hardQty: {},
+    hardSum: {},
+    railSelect: "Без поручня",
+    railLength: "",
+    railManual: ""
+  }
+];
+let activeSectionIdx = 0;
+
+function syncCurrentInputsToSection() {
+  if (!sections[activeSectionIdx]) return;
+  const s = sections[activeSectionIdx];
+  s.trapLen = el('trapLen') ? el('trapLen').value : '';
+  s.rectLen = el('rectLen') ? el('rectLen').value : '';
+  s.trapArea = el('trapArea') ? el('trapArea').value : '';
+  s.rectArea = el('rectArea') ? el('rectArea').value : '';
+  s.glass = el('glass') ? el('glass').value : Object.keys(D.glass)[0];
+  
+  s.hardQty = {};
+  document.querySelectorAll('.hardQty').forEach(inp => {
+    s.hardQty[inp.dataset.idx] = inp.value;
+  });
+  
+  s.hardSum = {};
+  document.querySelectorAll('.hardSum').forEach(inp => {
+    s.hardSum[inp.dataset.idx] = inp.value;
+  });
+  
+  s.railSelect = el('railSelect') ? el('railSelect').value : 'Без поручня';
+  s.railLength = el('railLength') ? el('railLength').value : '';
+  s.railManual = el('railManual') ? el('railManual').value : '';
+}
+
+function loadSectionToInputs(idx) {
+  activeSectionIdx = idx;
+  const s = sections[idx];
+  if (!s) return;
+  
+  if (el('trapLen')) el('trapLen').value = s.trapLen || '';
+  if (el('rectLen')) el('rectLen').value = s.rectLen || '';
+  if (el('trapArea')) el('trapArea').value = s.trapArea || '';
+  if (el('rectArea')) el('rectArea').value = s.rectArea || '';
+  
+  if (el('glass')) el('glass').value = s.glass || Object.keys(D.glass)[0];
+  
+  document.querySelectorAll('.hardQty').forEach(inp => {
+    inp.value = (s.hardQty && s.hardQty[inp.dataset.idx]) || '';
+  });
+  document.querySelectorAll('.hardSum').forEach(inp => {
+    inp.value = (s.hardSum && s.hardSum[inp.dataset.idx]) || '';
+  });
+  
+  if (el('railSelect')) el('railSelect').value = s.railSelect || 'Без поручня';
+  if (el('railLength')) el('railLength').value = s.railLength || '';
+  if (el('railManual')) el('railManual').value = s.railManual || '';
+  
+  const nameInp = el('secNameInput');
+  if (nameInp) nameInp.value = s.name || `Ограждение ${idx + 1}`;
+  
+  renderSectionTabs();
+  calc();
+}
+
+function renderSectionTabs() {
+  const tabsContainer = el('sectionTabs');
+  const btnText = el('addSectionBtnText');
+  const nameRow = el('secNameRow');
+  if (!tabsContainer) return;
+  
+  if (btnText) {
+    btnText.textContent = `+ Добавить ограждение №${sections.length + 1}`;
+  }
+  
+  if (nameRow) {
+    nameRow.style.display = sections.length > 1 ? 'flex' : 'none';
+  }
+  
+  tabsContainer.innerHTML = sections.map((sec, idx) => `
+    <div class="sec-tab ${idx === activeSectionIdx ? 'active' : ''}" onclick="switchSection(${idx})">
+      <span>🪜 ${sec.name || `Ограждение ${idx + 1}`}</span>
+      ${sections.length > 1 ? `<span class="tab-del-btn" onclick="removeSection(${idx}, event)" title="Удалить секцию">✕</span>` : ''}
+    </div>
+  `).join('');
+}
+
+function switchSection(idx) {
+  if (idx === activeSectionIdx) return;
+  syncCurrentInputsToSection();
+  loadSectionToInputs(idx);
+}
+
+function addSection() {
+  syncCurrentInputsToSection();
+  const nextNum = sections.length + 1;
+  const newSec = {
+    id: Date.now(),
+    name: `Ограждение ${nextNum}`,
+    trapLen: '',
+    rectLen: '',
+    trapArea: '',
+    rectArea: '',
+    glass: Object.keys(D.glass)[0],
+    hardQty: {},
+    hardSum: {},
+    railSelect: 'Без поручня',
+    railLength: '',
+    railManual: ''
+  };
+  sections.push(newSec);
+  loadSectionToInputs(sections.length - 1);
+  showToast(`Добавлено ограждение №${nextNum}! 🪜`);
+}
+
+function removeSection(idx, event) {
+  if (event) event.stopPropagation();
+  if (sections.length <= 1) return;
+  
+  syncCurrentInputsToSection();
+  sections.splice(idx, 1);
+  const nextActive = Math.min(activeSectionIdx, sections.length - 1);
+  loadSectionToInputs(nextActive);
+  showToast('Ограждение удалено');
+}
+
+function onSectionNameChange() {
+  const nameInp = el('secNameInput');
+  if (!nameInp || !sections[activeSectionIdx]) return;
+  sections[activeSectionIdx].name = nameInp.value.trim() || `Ограждение ${activeSectionIdx + 1}`;
+  renderSectionTabs();
+  calc();
+}
 
 function updateGlassSwatch(gName) {
   const pill = el('glassSwatchPill');
@@ -162,7 +304,7 @@ function buildRailSelect() {
 function buildServiceList() {
   el('serviceList').innerHTML = D.services.map((s, idx) => `
     <div class="row3" style="grid-template-columns:1fr 140px">
-      <div class="nm">${s.name}<span class="pt">${s.emptyDefault === 'free' ? 'пусто → скрыть' : 'пусто → скрыть'}</span></div>
+      <div class="nm">${s.name}<span class="pt">пусто → скрыть</span></div>
       <div>
         <label>Цена, ₽</label>
         <div class="input-wrap">
@@ -325,7 +467,6 @@ function renderServiceSettings() {
     <div class="srow two">
       <span>${s.name}</span>
       <select onchange="D.services[${idx}].emptyDefault=this.value; buildServiceList(); autoSave(); calc();">
-        <option value="free" ${s.emptyDefault==='free'?'selected':''}>скрыть</option>
         <option value="hide" ${s.emptyDefault==='hide'?'selected':''}>скрыть</option>
       </select>
       <button class="btn b-red" onclick="delService(${idx})">✕</button>
@@ -408,6 +549,8 @@ function calcFromLength() {
 }
 
 function calc() {
+  syncCurrentInputsToSection();
+  
   const gName = el('glass').value;
   const g = D.glass[gName] || { trap: 0, rect: 0 };
   el('trapPrice').value = g.trap;
@@ -416,75 +559,100 @@ function calc() {
   
   updateGlassSwatch(gName);
 
-  const trapA = val('trapArea') || 0;
-  const rectA = val('rectArea') || 0;
-  
-  // 1. Стекло (с округлением до 500 ₽)
-  const rawGlassSum = trapA * g.trap + rectA * g.rect;
-  const glassSum = roundUp500(rawGlassSum);
+  // Calculate each section
+  let allSectionsBaseSum = 0;
+  const calculatedSections = [];
 
-  // 2. Фурнитура и поручень (с округлением до 500 ₽)
-  const parts = [];
-  let hardSum = 0;
-  document.querySelectorAll('.hardQty').forEach(inp => {
-    const idx = parseInt(inp.dataset.idx);
-    const item = D.hard[idx];
-    if (!item) return;
-    const qty = inp.value.trim() === '' ? null : (parseFloat(inp.value) || 0);
-    const sumInput = document.querySelector(`.hardSum[data-idx="${idx}"]`);
-    const man = sumInput && sumInput.value.trim() !== '' ? (parseFloat(sumInput.value) || 0) : null;
-    let s = 0;
-    if (man !== null) s = man;
-    else if (qty !== null) s = qty * item.price;
-    if (s > 0 || (qty !== null && qty > 0)) {
-      hardSum += s;
-      parts.push(item.name.toLowerCase() + (qty ? ` ${qty} ${item.unit}` : ''));
+  sections.forEach((sec, sIdx) => {
+    const secGName = sec.glass || Object.keys(D.glass)[0];
+    const secG = D.glass[secGName] || { trap: 0, rect: 0 };
+    const secTrapA = parseFloat(sec.trapArea) || 0;
+    const secRectA = parseFloat(sec.rectArea) || 0;
+    
+    // Glass
+    const rawGlass = secTrapA * secG.trap + secRectA * secG.rect;
+    const secGlassSum = roundUp500(rawGlass);
+
+    // Hardware
+    let secHardSum = 0;
+    const secParts = [];
+    D.hard.forEach((item, hIdx) => {
+      const qStr = sec.hardQty && sec.hardQty[hIdx];
+      const qty = qStr !== undefined && String(qStr).trim() !== '' ? (parseFloat(qStr) || 0) : null;
+      const mStr = sec.hardSum && sec.hardSum[hIdx];
+      const man = mStr !== undefined && String(mStr).trim() !== '' ? (parseFloat(mStr) || 0) : null;
+      let s = 0;
+      if (man !== null) s = man;
+      else if (qty !== null) s = qty * item.price;
+      if (s > 0 || (qty !== null && qty > 0)) {
+        secHardSum += s;
+        secParts.push(item.name.toLowerCase() + (qty ? ` ${qty} ${item.unit}` : ''));
+      }
+    });
+    const secHardTotal = roundUp500(secHardSum);
+
+    // Rail
+    const secRailName = sec.railSelect || 'Без поручня';
+    const secRailItem = D.rail.find(r => r.name === secRailName) || { price: 0 };
+    const secRailLen = sec.railLength !== undefined && String(sec.railLength).trim() !== '' ? (parseFloat(sec.railLength) || 0) : null;
+    const secRailMan = sec.railManual !== undefined && String(sec.railManual).trim() !== '' ? (parseFloat(sec.railManual) || 0) : null;
+    const secHasRail = secRailName !== 'Без поручня' && !/без поручня/i.test(secRailName) && ((secRailLen !== null && secRailLen > 0) || (secRailMan !== null && secRailMan > 0));
+
+    let rawRailSum = 0;
+    if (secHasRail) {
+      if (secRailMan !== null) rawRailSum = secRailMan;
+      else if (secRailLen !== null) rawRailSum = secRailLen * secRailItem.price;
     }
+    const secRailTotal = roundUp500(rawRailSum);
+
+    const secTotal = secGlassSum + secHardTotal + secRailTotal;
+    allSectionsBaseSum += secTotal;
+
+    calculatedSections.push({
+      sec,
+      idx: sIdx,
+      glassName: secGName,
+      glassSum: secGlassSum,
+      parts: secParts,
+      hardTotal: secHardTotal,
+      hasRail: secHasRail,
+      railName: secRailName,
+      railTotal: secRailTotal,
+      total: secTotal
+    });
   });
 
-  const railName = el('railSelect').value;
-  const railItem = D.rail.find(r => r.name === railName) || { price: 0 };
-  const railLength = val('railLength');
-  const railManual = val('railManual');
-  const hasRail = railName !== 'Без поручня' && !/без поручня/i.test(railName) && ((railLength !== null && railLength > 0) || (railManual !== null && railManual > 0));
-
-  let rawRailSum = 0;
-  if (hasRail) {
-    if (railManual !== null) rawRailSum = railManual;
-    else if (railLength !== null) rawRailSum = railLength * railItem.price;
-  }
-  const railSumRound = roundUp500(rawRailSum);
+  // Current active rail hint
+  const curSec = sections[activeSectionIdx] || sections[0];
+  const curRailName = curSec.railSelect || 'Без поручня';
+  const curRailLen = curSec.railLength !== undefined && String(curSec.railLength).trim() !== '' ? (parseFloat(curSec.railLength) || 0) : null;
+  const curRailMan = curSec.railManual !== undefined && String(curSec.railManual).trim() !== '' ? (parseFloat(curSec.railManual) || 0) : null;
+  const curHasRail = curRailName !== 'Без поручня' && !/без поручня/i.test(curRailName) && ((curRailLen !== null && curRailLen > 0) || (curRailMan !== null && curRailMan > 0));
 
   const railHintEl = el('railHint');
   if (railHintEl) {
-    if (hasRail) {
+    if (curHasRail) {
       railHintEl.textContent = 'Поручень включён в расчёт и выводится отдельным пунктом в КП.';
-    } else if (/без поручня/i.test(railName)) {
+    } else if (/без поручня/i.test(curRailName)) {
       railHintEl.textContent = 'Поручень не выбран.';
     } else {
       railHintEl.textContent = 'Укажите длину поручня для включения в смету.';
     }
   }
 
-  const rawHardwareTotal = hardSum;
-  const hardwareTotal = roundUp500(rawHardwareTotal);
-
-  // 3. Доставка (с округлением до 500 ₽)
+  // Global Services (Delivery, Installation, Add. services)
   const rawDelSum = el('delOn').checked ? num('delPrice') : 0;
   const delSum = roundUp500(rawDelSum);
 
-  // 4. Монтажные работы (с округлением до 500 ₽)
   const mode = el('instMode').value;
   el('instFixWrap').style.display = mode === 'fix' ? 'block' : 'none';
   el('instPctWrap').style.display = mode === 'pct' ? 'block' : 'none';
-  const base1_4 = glassSum + hardwareTotal + (hasRail ? railSumRound : 0);
   let rawInstSum = 0;
   if (el('instOn').checked) {
-    rawInstSum = mode === 'fix' ? num('instFix') : (base1_4 * num('instPct') / 100);
+    rawInstSum = mode === 'fix' ? num('instFix') : (allSectionsBaseSum * num('instPct') / 100);
   }
   const instSum = roundUp500(rawInstSum);
 
-  // 5. Дополнительные услуги: НЕ вписываем, если сумма не указана (> 0)
   let servSum = 0;
   const servLines = [];
   document.querySelectorAll('.servPrice').forEach(inp => {
@@ -499,8 +667,8 @@ function calc() {
     }
   });
 
-  // Итоговая сумма складывается из всех позиций (включая поручень)
-  const total = glassSum + hardwareTotal + (hasRail ? railSumRound : 0) + delSum + instSum + servSum;
+  // Total amount
+  const total = allSectionsBaseSum + delSum + instSum + servSum;
 
   el('sum').textContent = rub(total);
   const floatEl = el('floatingSum');
@@ -511,23 +679,34 @@ function calc() {
     ? 'Срок задан вручную'
     : (/триплекс/i.test(gName) ? 'Авто: триплекс — ' + M.termTripl + ' раб. дней' : 'Авто: стекло 10 мм — ' + M.termGlass + ' раб. дней');
 
-  let t = 'Стоимость ограждения будет следующей:\n\n';
+  // Format proposal text
+  let t = calculatedSections.length > 1 ? 'Стоимость ограждений будет следующей:\n\n' : 'Стоимость ограждения будет следующей:\n\n';
   let counter = 1;
-  // Стекло без указания метров квадратных
-  t += `${counter++}. Стекло закаленное ${gName} — ${rub(glassSum)}\n`;
-  t += `${counter++}. Комплект фурнитуры`;
-  if (parts.length) t += ` (${parts.join(', ')})`;
-  t += ` — ${rub(hardwareTotal)}\n`;
 
-  // Поручень отдельным пунктом без указания погонных метров
-  if (hasRail) {
-    t += `${counter++}. Поручень: ${railName} — ${rub(railSumRound)}\n`;
+  if (calculatedSections.length === 1) {
+    const cs = calculatedSections[0];
+    t += `${counter++}. Стекло закаленное ${cs.glassName} — ${rub(cs.glassSum)}\n`;
+    t += `${counter++}. Комплект фурнитуры`;
+    if (cs.parts.length) t += ` (${cs.parts.join(', ')})`;
+    t += ` — ${rub(cs.hardTotal)}\n`;
+    if (cs.hasRail) {
+      t += `${counter++}. Поручень: ${cs.railName} — ${rub(cs.railTotal)}\n`;
+    }
+  } else {
+    calculatedSections.forEach((cs, cIdx) => {
+      t += `ПОЗИЦИЯ ${cIdx + 1}: ${cs.sec.name || `Ограждение ${cIdx + 1}`}\n`;
+      t += `  • Стекло закаленное ${cs.glassName} — ${rub(cs.glassSum)}\n`;
+      t += `  • Комплект фурнитуры${cs.parts.length ? ` (${cs.parts.join(', ')})` : ''} — ${rub(cs.hardTotal)}\n`;
+      if (cs.hasRail) {
+        t += `  • Поручень: ${cs.railName} — ${rub(cs.railTotal)}\n`;
+      }
+      t += `  Итого за позицию — ${rub(cs.total)}\n\n`;
+    });
   }
 
   t += `${counter++}. Доставка, разгрузка — ${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}\n`;
   t += `${counter++}. Монтажные работы — ${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : 'не требуются'}\n`;
   
-  // Доп услуги только если > 0
   servLines.forEach(line => { t += `${counter++}. ${line}\n`; });
   t += `\nИтого общая стоимость — ${fmt(total)} рублей.\n`;
   t += `Срок изготовления — ${num('termDays')} рабочих дней.`;
@@ -542,7 +721,6 @@ let currentKpSeqNumber = null;
 async function fetchNextSequenceNumber() {
   let localNum = parseInt(localStorage.getItem('glassloft_kp_seq_num') || '0', 10);
   
-  // Атомарный глобальный счётчик через облачный API
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2500);
@@ -565,7 +743,6 @@ async function fetchNextSequenceNumber() {
     console.warn('Using offline sequence counter', e);
   }
   
-  // Оффлайн-фоллбэк
   localNum += 1;
   localStorage.setItem('glassloft_kp_seq_num', String(localNum));
   currentKpSeqNumber = localNum;
@@ -607,7 +784,7 @@ function getFormattedDates() {
   const y = now.getFullYear();
   const yy = String(y).slice(-2);
   const dateStr = `${d}.${m}.${y}`;
-  const noDots = `${d}${m}${yy}`; // Формат: 260826 (ДДММГГ)
+  const noDots = `${d}${m}${yy}`; // Формат: 260826
   
   const exp = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
   const expD = pad(exp.getDate());
@@ -630,7 +807,6 @@ function getKpFileName(forcedDocNum) {
     .replace(/[^a-zA-Z0-9а-яА-ЯёЁ_]/g, '')
     .replace(/^_+|_+$/g, '');
     
-  // Формат: КП_порядковый номер-дата без точек, запятых и тире_адрес объекта
   return `КП_${docNum}-${dates.noDots}_${addrClean || 'объект'}`;
 }
 
@@ -650,56 +826,78 @@ function updateKpDocumentData(forcedDocNum) {
   if (el('kpDocAddress')) el('kpDocAddress').textContent = addressVal;
   if (el('kpDocClient')) el('kpDocClient').textContent = clientVal;
   if (el('kpDocPrepay')) el('kpDocPrepay').textContent = prepayVal;
-  
-  const gName = el('glass').value;
-  const g = D.glass[gName] || { trap: 0, rect: 0 };
-  const trapA = val('trapArea') || 0;
-  const rectA = val('rectArea') || 0;
-  const rawGlassSum = trapA * g.trap + rectA * g.rect;
-  const glassSum = roundUp500(rawGlassSum);
-  
-  const parts = [];
-  let hardSum = 0;
-  document.querySelectorAll('.hardQty').forEach(inp => {
-    const idx = parseInt(inp.dataset.idx);
-    const item = D.hard[idx];
-    if (!item) return;
-    const qty = inp.value.trim() === '' ? null : (parseFloat(inp.value) || 0);
-    const sumInput = document.querySelector(`.hardSum[data-idx="${idx}"]`);
-    const man = sumInput && sumInput.value.trim() !== '' ? (parseFloat(sumInput.value) || 0) : null;
-    let s = 0;
-    if (man !== null) s = man;
-    else if (qty !== null) s = qty * item.price;
-    if (s > 0 || (qty !== null && qty > 0)) {
-      hardSum += s;
-      parts.push(item.name.toLowerCase() + (qty ? ` ${qty} ${item.unit}` : ''));
-    }
-  });
 
-  const railName = el('railSelect').value;
-  const railItem = D.rail.find(r => r.name === railName) || { price: 0 };
-  const railLength = val('railLength');
-  const railManual = val('railManual');
-  const hasRail = railName !== 'Без поручня' && !/без поручня/i.test(railName) && ((railLength !== null && railLength > 0) || (railManual !== null && railManual > 0));
-
-  let rawRailSum = 0;
-  if (hasRail) {
-    if (railManual !== null) rawRailSum = railManual;
-    else if (railLength !== null) rawRailSum = railLength * railItem.price;
+  if (el('kpDocItemTitle')) {
+    el('kpDocItemTitle').textContent = sections.length > 1 ? 'Стеклянные ограждения' : (sections[0].name || 'Стеклянное ограждение');
   }
-  const railSumRound = roundUp500(rawRailSum);
 
-  const rawHardwareTotal = hardSum;
-  const hardwareTotal = roundUp500(rawHardwareTotal);
+  // Calculate all sections for document table
+  let allSectionsBaseSum = 0;
+  const calculatedSections = [];
+
+  sections.forEach((sec, sIdx) => {
+    const secGName = sec.glass || Object.keys(D.glass)[0];
+    const secG = D.glass[secGName] || { trap: 0, rect: 0 };
+    const secTrapA = parseFloat(sec.trapArea) || 0;
+    const secRectA = parseFloat(sec.rectArea) || 0;
+    
+    const rawGlass = secTrapA * secG.trap + secRectA * secG.rect;
+    const secGlassSum = roundUp500(rawGlass);
+
+    let secHardSum = 0;
+    const secParts = [];
+    D.hard.forEach((item, hIdx) => {
+      const qStr = sec.hardQty && sec.hardQty[hIdx];
+      const qty = qStr !== undefined && String(qStr).trim() !== '' ? (parseFloat(qStr) || 0) : null;
+      const mStr = sec.hardSum && sec.hardSum[hIdx];
+      const man = mStr !== undefined && String(mStr).trim() !== '' ? (parseFloat(mStr) || 0) : null;
+      let s = 0;
+      if (man !== null) s = man;
+      else if (qty !== null) s = qty * item.price;
+      if (s > 0 || (qty !== null && qty > 0)) {
+        secHardSum += s;
+        secParts.push(item.name.toLowerCase() + (qty ? ` ${qty} ${item.unit}` : ''));
+      }
+    });
+    const secHardTotal = roundUp500(secHardSum);
+
+    const secRailName = sec.railSelect || 'Без поручня';
+    const secRailItem = D.rail.find(r => r.name === secRailName) || { price: 0 };
+    const secRailLen = sec.railLength !== undefined && String(sec.railLength).trim() !== '' ? (parseFloat(sec.railLength) || 0) : null;
+    const secRailMan = sec.railManual !== undefined && String(sec.railManual).trim() !== '' ? (parseFloat(sec.railManual) || 0) : null;
+    const secHasRail = secRailName !== 'Без поручня' && !/без поручня/i.test(secRailName) && ((secRailLen !== null && secRailLen > 0) || (secRailMan !== null && secRailMan > 0));
+
+    let rawRailSum = 0;
+    if (secHasRail) {
+      if (secRailMan !== null) rawRailSum = secRailMan;
+      else if (secRailLen !== null) rawRailSum = secRailLen * secRailItem.price;
+    }
+    const secRailTotal = roundUp500(rawRailSum);
+
+    const secTotal = secGlassSum + secHardTotal + secRailTotal;
+    allSectionsBaseSum += secTotal;
+
+    calculatedSections.push({
+      sec,
+      idx: sIdx,
+      glassName: secGName,
+      glassSum: secGlassSum,
+      parts: secParts,
+      hardTotal: secHardTotal,
+      hasRail: secHasRail,
+      railName: secRailName,
+      railTotal: secRailTotal,
+      total: secTotal
+    });
+  });
 
   const rawDelSum = el('delOn').checked ? num('delPrice') : 0;
   const delSum = roundUp500(rawDelSum);
 
   const mode = el('instMode').value;
-  const base1_4 = glassSum + hardwareTotal + (hasRail ? railSumRound : 0);
   let rawInstSum = 0;
   if (el('instOn').checked) {
-    rawInstSum = mode === 'fix' ? num('instFix') : (base1_4 * num('instPct') / 100);
+    rawInstSum = mode === 'fix' ? num('instFix') : (allSectionsBaseSum * num('instPct') / 100);
   }
   const instSum = roundUp500(rawInstSum);
 
@@ -717,68 +915,97 @@ function updateKpDocumentData(forcedDocNum) {
     }
   });
 
-  const total = glassSum + hardwareTotal + (hasRail ? railSumRound : 0) + delSum + instSum + servSum;
+  const total = allSectionsBaseSum + delSum + instSum + servSum;
 
   if (el('kpDocTotal')) el('kpDocTotal').textContent = rub(total);
   if (el('kpDocTerm')) el('kpDocTerm').textContent = `${num('termDays')} раб. дней`;
   if (el('kpDocExpire')) el('kpDocExpire').textContent = dates.expStr;
 
-  // Build table rows without any bold tags and without area/length metrics
+  // Build table rows
   let rowsHtml = '';
   
-  // 1. Стекло (без указания м²)
-  const glassDesc = `Стекло закаленное ${gName}`;
-  rowsHtml += `<tr>
-    <td>${glassDesc}</td>
-    <td class="c">компл.</td>
-    <td class="c">1</td>
-    <td class="r">${rub(glassSum)}</td>
-    <td class="r">${rub(glassSum)}</td>
-  </tr>`;
-
-  // 2. Комплект фурнитуры
-  const hardDesc = `Комплект фурнитуры${parts.length ? ` (${parts.join(', ')})` : ''}`;
-  rowsHtml += `<tr>
-    <td>${hardDesc}</td>
-    <td class="c">компл.</td>
-    <td class="c">1</td>
-    <td class="r">${rub(hardwareTotal)}</td>
-    <td class="r">${rub(hardwareTotal)}</td>
-  </tr>`;
-
-  // 3. Поручень (без указания м.пог.)
-  if (hasRail) {
-    const railDesc = `Поручень: ${railName}`;
+  if (calculatedSections.length === 1) {
+    const cs = calculatedSections[0];
     rowsHtml += `<tr>
-      <td>${railDesc}</td>
+      <td>Стекло закаленное ${cs.glassName}</td>
       <td class="c">компл.</td>
       <td class="c">1</td>
-      <td class="r">${rub(railSumRound)}</td>
-      <td class="r">${rub(railSumRound)}</td>
+      <td class="r">${rub(cs.glassSum)}</td>
+      <td class="r">${rub(cs.glassSum)}</td>
     </tr>`;
+
+    rowsHtml += `<tr>
+      <td>Комплект фурнитуры${cs.parts.length ? ` (${cs.parts.join(', ')})` : ''}</td>
+      <td class="c">компл.</td>
+      <td class="c">1</td>
+      <td class="r">${rub(cs.hardTotal)}</td>
+      <td class="r">${rub(cs.hardTotal)}</td>
+    </tr>`;
+
+    if (cs.hasRail) {
+      rowsHtml += `<tr>
+        <td>Поручень: ${cs.railName}</td>
+        <td class="c">компл.</td>
+        <td class="c">1</td>
+        <td class="r">${rub(cs.railTotal)}</td>
+        <td class="r">${rub(cs.railTotal)}</td>
+      </tr>`;
+    }
+  } else {
+    calculatedSections.forEach((cs, cIdx) => {
+      rowsHtml += `<tr class="kp-sec-hdr">
+        <td colspan="5">ПОЗИЦИЯ ${cIdx + 1}: ${cs.sec.name || `Ограждение ${cIdx + 1}`}</td>
+      </tr>`;
+
+      rowsHtml += `<tr>
+        <td>Стекло закаленное ${cs.glassName}</td>
+        <td class="c">компл.</td>
+        <td class="c">1</td>
+        <td class="r">${rub(cs.glassSum)}</td>
+        <td class="r">${rub(cs.glassSum)}</td>
+      </tr>`;
+
+      rowsHtml += `<tr>
+        <td>Комплект фурнитуры${cs.parts.length ? ` (${cs.parts.join(', ')})` : ''}</td>
+        <td class="c">компл.</td>
+        <td class="c">1</td>
+        <td class="r">${rub(cs.hardTotal)}</td>
+        <td class="r">${rub(cs.hardTotal)}</td>
+      </tr>`;
+
+      if (cs.hasRail) {
+        rowsHtml += `<tr>
+          <td>Поручень: ${cs.railName}</td>
+          <td class="c">компл.</td>
+          <td class="c">1</td>
+          <td class="r">${rub(cs.railTotal)}</td>
+          <td class="r">${rub(cs.railTotal)}</td>
+        </tr>`;
+      }
+    });
+
+    rowsHtml += `<tr class="kp-sec-hdr"><td colspan="5">ОБЩИЕ УСЛУГИ:</td></tr>`;
   }
 
-  // 4. Доставка
-  const delDesc = 'Доставка, разгрузка';
+  // Delivery
   rowsHtml += `<tr>
-    <td>${delDesc}</td>
+    <td>Доставка, разгрузка</td>
     <td class="c">компл.</td>
     <td class="c">1</td>
     <td class="r">${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}</td>
     <td class="r">${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : '0 ₽'}</td>
   </tr>`;
 
-  // 5. Монтаж
-  const instDesc = 'Монтажные работы';
+  // Install
   rowsHtml += `<tr>
-    <td>${instDesc}</td>
+    <td>Монтажные работы</td>
     <td class="c">компл.</td>
     <td class="c">1</td>
     <td class="r">${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : 'не требуются'}</td>
     <td class="r">${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : '0 ₽'}</td>
   </tr>`;
 
-  // 6. Доп. услуги (только если цена указана > 0)
+  // Services
   servRows.forEach(sr => {
     rowsHtml += `<tr>
       <td>${sr.name}</td>
@@ -817,7 +1044,6 @@ function copyQuote() {
 async function sharePDF() {
   showToast('Формирование PDF для отправки... ⏳');
   
-  // Атомарно инкрементируем порядковый номер перед отправкой
   const seqNum = await fetchNextSequenceNumber();
   updateKpDocumentData(seqNum);
 
@@ -851,7 +1077,6 @@ async function sharePDF() {
       const pdfBlob = pdf.output('blob');
       const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-      // На мобильных устройствах открываем системное меню шеринга файла
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
         try {
           await navigator.share({
@@ -865,7 +1090,6 @@ async function sharePDF() {
         }
       }
 
-      // Если шеринг файлов напрямую не поддерживается браузером, скачиваем PDF
       pdf.save(filename);
       showToast('PDF-файл сформирован и скачан! 📄');
     }
@@ -878,7 +1102,6 @@ async function sharePDF() {
 async function exportKP(format) {
   showToast(`Формирование ${format.toUpperCase()}... ⏳`);
   
-  // Атомарно инкрементируем порядковый номер перед выгрузкой
   const seqNum = await fetchNextSequenceNumber();
   updateKpDocumentData(seqNum);
 
@@ -945,6 +1168,7 @@ function fallbackCopy(text) {
 }
 
 function pack() {
+  syncCurrentInputsToSection();
   const misc = {};
   for (const k in D.misc) misc[k] = D.misc[k];
   return { glass: D.glass, hard: D.hard, rail: D.rail, services: D.services, misc };
@@ -964,6 +1188,7 @@ function buildAll() {
   buildHardList();
   buildRailSelect();
   buildServiceList();
+  renderSectionTabs();
 }
 
 buildAll();

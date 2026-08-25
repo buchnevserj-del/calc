@@ -32,10 +32,22 @@
     <!-- Left Column: Step-by-Step Builder Form -->
     <div class="builder-col">
       
+      <!-- Multi-Section Bar -->
+      <div class="sections-bar-wrap">
+        <div class="sections-tabs" id="sectionTabs"></div>
+        <button type="button" class="btn b-primary btn-add-section" onclick="addSection()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span id="addSectionBtnText">+ Добавить ограждение №2</span>
+        </button>
+      </div>
+
       <!-- Step 0: Длина ограждения (в самом начале) -->
       <section class="card highlight">
+        <div class="sec-name-row" id="secNameRow" style="display:none;">
+          <input type="text" class="sec-name-input" id="secNameInput" placeholder="Название ограждения (напр. Лестница 1 этаж)" oninput="onSectionNameChange()">
+        </div>
         <div class="head">
-          <h2><span class="n">📐</span>Длина ограждения (м.пог.)</h2>
+          <h2><span class="n">📐</span><span id="step0Title">Длина ограждения (м.пог.)</span></h2>
         </div>
         <div class="grid">
           <div class="field">
