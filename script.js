@@ -605,8 +605,9 @@ function getFormattedDates() {
   const d = pad(now.getDate());
   const m = pad(now.getMonth() + 1);
   const y = now.getFullYear();
+  const yy = String(y).slice(-2);
   const dateStr = `${d}.${m}.${y}`;
-  const noDots = `${d}${m}${y}`;
+  const noDots = `${d}${m}${yy}`; // Формат: 260826 (ДДММГГ)
   
   const exp = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
   const expD = pad(exp.getDate());
