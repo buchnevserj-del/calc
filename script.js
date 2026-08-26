@@ -295,9 +295,9 @@ function renderPositionTabs() {
     loft: 'перегородку'
   };
   const catIcons = {
-    railings: '🪜',
-    showers: '🚿',
-    loft: '🏢'
+    railings: '<img src="cat_icon_stairs.png" class="pos-tab-img" alt="Лестница">',
+    showers: '<img src="cat_icon_shower.png" class="pos-tab-img" alt="Душевая">',
+    loft: '<img src="cat_icon_loft.png" class="pos-tab-img" alt="Лофт">'
   };
 
   if (btnText) {
@@ -494,12 +494,12 @@ function renderCategoryContent() {
       </section>
     `;
   } else if (cat === 'showers') {
-    // Showers Builder (8 mm ONLY)
+    // Showers Builder
     html += `
       <!-- Step 1: Размеры душевого ограждения -->
       <section class="card highlight">
         <div class="head">
-          <h2><span class="n">🚿</span>Размеры душевой (м²)</h2>
+          <h2><span class="n"><img src="cat_icon_shower.png" class="pos-tab-img" alt=""></span>Размеры душевой (м²)</h2>
         </div>
         <div class="grid">
           <div class="field">
@@ -521,10 +521,10 @@ function renderCategoryContent() {
         </div>
       </section>
 
-      <!-- Step 2: Стекло 8 мм для душевых -->
+      <!-- Step 2: Стекло для душевых -->
       <section class="card">
         <div class="head">
-          <h2><span class="n">1</span>Тип стекла (8 мм)</h2>
+          <h2><span class="n">1</span>Тип стекла</h2>
           <button class="btn ghost" onclick="openModal('glassModal')">Настройки</button>
         </div>
         <label>Выберите душевое стекло (закаленное 8 мм)</label>
@@ -548,12 +548,12 @@ function renderCategoryContent() {
       </section>
     `;
   } else if (cat === 'loft') {
-    // Loft Partitions Builder (6 mm ONLY)
+    // Loft Partitions Builder
     html += `
       <!-- Step 1: Размеры лофт-перегородки -->
       <section class="card highlight">
         <div class="head">
-          <h2><span class="n">🏢</span>Размеры и метраж профиля</h2>
+          <h2><span class="n"><img src="cat_icon_loft.png" class="pos-tab-img" alt=""></span>Размеры и метраж профиля</h2>
         </div>
         <div class="grid">
           <div class="field">
@@ -583,10 +583,10 @@ function renderCategoryContent() {
         </div>
       </section>
 
-      <!-- Step 2: Стекло 6 мм для лофт перегородок -->
+      <!-- Step 2: Стекло для лофт перегородок -->
       <section class="card">
         <div class="head">
-          <h2><span class="n">1</span>Тип стекла (6 мм)</h2>
+          <h2><span class="n">1</span>Тип стекла</h2>
           <button class="btn ghost" onclick="openModal('glassModal')">Настройки</button>
         </div>
         <label>Выберите стекло (закаленное 6 мм)</label>
@@ -1094,9 +1094,9 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
     } else if (activeCategory === 'railings') {
       el('kpDocItemTitle').textContent = 'Стеклянное ограждение лестницы';
     } else if (activeCategory === 'showers') {
-      el('kpDocItemTitle').textContent = 'Душевое ограждение из закалённого стекла (8 мм)';
+      el('kpDocItemTitle').textContent = 'Душевое ограждение из закалённого стекла';
     } else {
-      el('kpDocItemTitle').textContent = 'Межкомнатная стеклянная лофт-перегородка (6 мм)';
+      el('kpDocItemTitle').textContent = 'Межкомнатная стеклянная лофт-перегородка';
     }
   }
 

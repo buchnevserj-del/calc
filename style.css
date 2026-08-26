@@ -177,6 +177,16 @@ body {
 .cat-tab .cat-icon {
   font-size: 18px;
 }
+.cat-tab-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex-shrink: 0;
+  transition: filter 0.2s;
+}
+.cat-tab.active .cat-tab-img {
+  filter: brightness(0) invert(1);
+}
 .cat-tab:hover {
   background: var(--card-sub);
   color: var(--text);
@@ -185,6 +195,13 @@ body {
   background: var(--primary-gradient);
   color: #ffffff;
   box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+}
+
+.pos-tab-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  vertical-align: middle;
 }
 
 /* Multi-Section Tab Navigation Inside Category */
