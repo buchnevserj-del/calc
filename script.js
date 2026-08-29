@@ -1019,18 +1019,48 @@ function calc() {
   const floatEl = el('floatingSum');
   if (floatEl) floatEl.textContent = rub(total);
 
-  if (!termManual) el('termDays').value = 21;
-
-  // Render proposal text
-  let t = 'Стоимость заказа будет следующей:\n\n';
-  let counter = 1;
-
   const activeCalculated = [
     ...resRailings.calcPositions,
     ...resBalconies.calcPositions,
     ...resShowers.calcPositions,
     ...resLoft.calcPositions
   ].filter(cp => cp.posTotal > 0 || cp.glassSum > 0 || cp.hardTotal > 0);
+
+  // Automatic manufacturing term calculation (Maximum across all active positions)
+  const termGlassDays = (D.misc && D.misc.termGlass) ? parseInt(D.misc.termGlass, 10) : 21;
+  const termTriplexDays = (D.misc && D.misc.termTripl) ? parseInt(D.misc.termTripl, 10) : 25;
+
+  let hasTriplex = false;
+  activeCalculated.forEach(cp => {
+    if (/триплекс/i.test(cp.glassName)) {
+      hasTriplex = true;
+    }
+  });
+
+  if (activeCalculated.length === 0) {
+    const curG = (curCat === 'railings' || curCat === 'balconies') ? curItem.glass : '';
+    if (/триплекс/i.test(curG)) {
+      hasTriplex = true;
+    }
+  }
+
+  const autoDays = hasTriplex ? termTriplexDays : termGlassDays;
+
+  if (!termManual) {
+    if (el('termDays')) el('termDays').value = autoDays;
+  }
+
+  const finalDays = !termManual ? autoDays : (num('termDays') || autoDays);
+
+  if (el('termHint')) {
+    el('termHint').textContent = termManual
+      ? 'Срок задан вручную'
+      : (hasTriplex ? `Авто: триплекс — ${termTriplexDays} раб. дней (макс.)` : `Авто: обычное стекло — ${termGlassDays} раб. день`);
+  }
+
+  // Render proposal text
+  let t = 'Стоимость заказа будет следующей:\n\n';
+  let counter = 1;
 
   if (activeCalculated.length === 0) {
     const curCP = calculateCategoryData(curCat).calcPositions[curPIdx];
@@ -1062,7 +1092,7 @@ function calc() {
   servLines.forEach(line => { t += `${counter++}. ${line}\n`; });
 
   t += `\nИтого общая стоимость — ${fmt(total)} рублей.\n`;
-  t += `Срок изготовления — ${num('termDays')} рабочих дней.`;
+  t += `Срок изготовления — ${finalDays} рабочих дней.`;
 
   el('quoteText').textContent = t;
   updateKpDocumentData(null, true);
@@ -1374,8 +1404,17 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
 
   const total = subtotalItems + delSum + instSum + servSum;
 
+  const termGlassDays = (D.misc && D.misc.termGlass) ? parseInt(D.misc.termGlass, 10) : 21;
+  const termTriplexDays = (D.misc && D.misc.termTripl) ? parseInt(D.misc.termTripl, 10) : 25;
+  let docHasTriplex = false;
+  activeList.forEach(cp => {
+    if (/триплекс/i.test(cp.glassName)) docHasTriplex = true;
+  });
+  const autoTerm = docHasTriplex ? termTriplexDays : termGlassDays;
+  const docDays = num('termDays') || autoTerm;
+
   if (el('kpDocTotal')) el('kpDocTotal').textContent = rub(total);
-  if (el('kpDocTerm')) el('kpDocTerm').textContent = `${num('termDays')} раб. дней`;
+  if (el('kpDocTerm')) el('kpDocTerm').textContent = `${docDays} раб. дней`;
   if (el('kpDocExpire')) el('kpDocExpire').textContent = dates.expStr;
 
   if (el('kpDocTableBody')) el('kpDocTableBody').innerHTML = rowsHtml;
