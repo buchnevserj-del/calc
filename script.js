@@ -30,30 +30,29 @@ const DEF = {
 
   balconies: {
     glass: {
-      "Классическое прозрачное (зеленоватая кромка), 10 мм": { trap: 11500, rect: 10000 },
-      "Осветлённое Crystal Vision (без оттенка), 10 мм": { trap: 16000, rect: 13000 },
-      "Тонированное графит (серое), 10 мм": { trap: 13500, rect: 11000 },
-      "Тонированное бронза (коричневое), 10 мм": { trap: 13500, rect: 11000 },
-      "Триплекс 5+5 мм, классическое прозрачное": { trap: 13500, rect: 12500 },
-      "Триплекс 6+6 мм, классическое прозрачное": { trap: 15500, rect: 14000 },
-      "Триплекс осветлённое 6+4, Crystal Vision": { trap: 20000, rect: 18000 },
-      "Триплекс осветлённое 6+6, Crystal Vision": { trap: 22000, rect: 19500 },
-      "Триплекс графит серое + классическое 5+5 мм": { trap: 17500, rect: 16000 },
-      "Триплекс бронза + классическое 5+5 мм": { trap: 17500, rect: 16000 }
+      "Классическое прозрачное (зеленоватая кромка), 10 мм": { price: 10000 },
+      "Осветлённое Crystal Vision (без оттенка), 10 мм": { price: 13000 },
+      "Тонированное графит (серое), 10 мм": { price: 11000 },
+      "Тонированное бронза (коричневое), 10 мм": { price: 11000 },
+      "Триплекс 5+5 мм, классическое прозрачное": { price: 12500 },
+      "Триплекс 6+6 мм, классическое прозрачное": { price: 14000 },
+      "Триплекс осветлённое 6+4, Crystal Vision": { price: 18000 },
+      "Триплекс осветлённое 6+6, Crystal Vision": { price: 19500 },
+      "Триплекс графит серое + классическое 5+5 мм": { price: 16000 },
+      "Триплекс бронза + классическое 5+5 мм": { price: 16000 }
     },
     hard: [
-      { name: "Точечные крепления", price: 1250, unit: "шт" },
-      { name: "Опорный профиль h100 мм", price: 6700, unit: "м.пог" },
-      { name: "Соединительные коннекторы", price: 900, unit: "шт" },
-      { name: "Стойки 40х40х400", price: 4500, unit: "шт" }
+      { name: "Опорный профиль h100 мм для балконов", price: 6700, unit: "м.пог" },
+      { name: "Точечные крепления в торец перекрытия", price: 1250, unit: "шт" },
+      { name: "Стойки 40х40х400 на балконную плиту", price: 4500, unit: "шт" },
+      { name: "Соединительные угловые коннекторы", price: 900, unit: "шт" }
     ],
     rail: [
       { name: "Без поручня", price: 0 },
-      { name: "Деревянный поручень 40×40, масло с воском", price: 5000 },
-      { name: "Деревянный поручень 40×40, эмаль однотонная (белый/чёрный)", price: 6000 },
-      { name: "Деревянный поручень 40×40, покрытие по образцу заказчика", price: 6500 },
       { name: "Алюминиевый поручень 40×40", price: 4500 },
-      { name: "Алюминиевый П-профиль 15×15 на верхнюю кромку стекла", price: 3000 }
+      { name: "Алюминиевый П-профиль 15×15 на кромку", price: 3000 },
+      { name: "Деревянный поручень 40×40, масло с воском", price: 5000 },
+      { name: "Деревянный поручень 40×40, эмаль", price: 6000 }
     ]
   },
 
@@ -115,7 +114,7 @@ let D = JSON.parse(JSON.stringify(DEF));
 // Load saved config
 function loadSavedConfig() {
   try {
-    const saved = localStorage.getItem('glassloft_multi_calc_v4');
+    const saved = localStorage.getItem('glassloft_multi_calc_v5');
     if (saved) {
       const p = JSON.parse(saved);
       if (p.railings) D.railings = p.railings;
@@ -151,7 +150,7 @@ let appState = {
     {
       id: 1,
       name: "Балконное ограждение 1",
-      trapLen: "", rectLen: "", trapArea: "", rectArea: "",
+      length: "", heightMm: "1000",
       glass: "Классическое прозрачное (зеленоватая кромка), 10 мм",
       hardQty: {}, hardSum: {},
       railSelect: "Без поручня", railLength: "", railManual: ""
@@ -242,12 +241,23 @@ function syncCurrentInputsToState() {
   const item = appState[cat][pIdx];
   if (!item) return;
 
-  if (cat === 'railings' || cat === 'balconies') {
+  if (cat === 'railings') {
     item.trapLen = el('trapLen') ? el('trapLen').value : '';
     item.rectLen = el('rectLen') ? el('rectLen').value : '';
     item.trapArea = el('trapArea') ? el('trapArea').value : '';
     item.rectArea = el('rectArea') ? el('rectArea').value : '';
-    item.glass = el('glass') ? el('glass').value : Object.keys(D[cat].glass)[0];
+    item.glass = el('glass') ? el('glass').value : Object.keys(D.railings.glass)[0];
+    item.hardQty = {};
+    document.querySelectorAll('.hardQty').forEach(inp => { item.hardQty[inp.dataset.idx] = inp.value; });
+    item.hardSum = {};
+    document.querySelectorAll('.hardSum').forEach(inp => { item.hardSum[inp.dataset.idx] = inp.value; });
+    item.railSelect = el('railSelect') ? el('railSelect').value : 'Без поручня';
+    item.railLength = el('railLength') ? el('railLength').value : '';
+    item.railManual = el('railManual') ? el('railManual').value : '';
+  } else if (cat === 'balconies') {
+    item.length = el('balconyLen') ? el('balconyLen').value : '';
+    item.heightMm = el('balconyHeightMm') ? el('balconyHeightMm').value : '';
+    item.glass = el('balconyGlass') ? el('balconyGlass').value : Object.keys(D.balconies.glass)[0];
     item.hardQty = {};
     document.querySelectorAll('.hardQty').forEach(inp => { item.hardQty[inp.dataset.idx] = inp.value; });
     item.hardSum = {};
@@ -281,12 +291,19 @@ function loadStateToInputs() {
   const item = appState[cat][pIdx];
   if (!item) return;
 
-  if (cat === 'railings' || cat === 'balconies') {
+  if (cat === 'railings') {
     if (el('trapLen')) el('trapLen').value = item.trapLen || '';
     if (el('rectLen')) el('rectLen').value = item.rectLen || '';
     if (el('trapArea')) el('trapArea').value = item.trapArea || '';
     if (el('rectArea')) el('rectArea').value = item.rectArea || '';
-    if (el('glass')) el('glass').value = item.glass || Object.keys(D[cat].glass)[0];
+    if (el('glass')) el('glass').value = item.glass || Object.keys(D.railings.glass)[0];
+    if (el('railSelect')) el('railSelect').value = item.railSelect || 'Без поручня';
+    if (el('railLength')) el('railLength').value = item.railLength || '';
+    if (el('railManual')) el('railManual').value = item.railManual || '';
+  } else if (cat === 'balconies') {
+    if (el('balconyLen')) el('balconyLen').value = item.length || '';
+    if (el('balconyHeightMm')) el('balconyHeightMm').value = item.heightMm || '1000';
+    if (el('balconyGlass')) el('balconyGlass').value = item.glass || Object.keys(D.balconies.glass)[0];
     if (el('railSelect')) el('railSelect').value = item.railSelect || 'Без поручня';
     if (el('railLength')) el('railLength').value = item.railLength || '';
     if (el('railManual')) el('railManual').value = item.railManual || '';
@@ -373,7 +390,7 @@ function addPosition() {
     newPos = {
       id: Date.now(),
       name: `Балконное ограждение ${nextNum}`,
-      trapLen: '', rectLen: '', trapArea: '', rectArea: '',
+      length: '', heightMm: '1000',
       glass: Object.keys(D.balconies.glass)[0],
       hardQty: {}, hardSum: {},
       railSelect: 'Без поручня', railLength: '', railManual: ''
@@ -440,23 +457,20 @@ function renderCategoryContent() {
 
   let html = '';
 
-  // 1. Position Name Field
+  // Position Name Field
   html += `
     <div class="sec-name-row" style="display:${items.length > 1 ? 'flex' : 'none'};">
       <input type="text" class="sec-name-input" id="posNameInput" placeholder="Название позиции" value="${curPos.name || ''}" oninput="onPositionNameChange()">
     </div>
   `;
 
-  if (cat === 'railings' || cat === 'balconies') {
-    const isBalcony = cat === 'balconies';
-    const iconSrc = isBalcony ? 'cat_icon_balcony.png' : 'cat_icon_stairs.png';
-    const step0Name = isBalcony ? 'Длина балконного ограждения (м.пог.)' : 'Длина ограждения (м.пог.)';
-
+  if (cat === 'railings') {
+    // 1. Лестничные ограждения (Трапеции + Прямоугольники)
     html += `
       <!-- Step 0: Длина ограждения -->
       <section class="card highlight">
         <div class="head">
-          <h2><span class="n"><img src="${iconSrc}" class="pos-tab-img" alt=""></span>${step0Name}</h2>
+          <h2><span class="n"><img src="cat_icon_stairs.png" class="pos-tab-img" alt=""></span>Длина ограждения (м.пог.)</h2>
         </div>
         <div class="grid">
           <div class="field">
@@ -484,7 +498,7 @@ function renderCategoryContent() {
           <h2><span class="n">1</span>Тип стекла</h2>
           <button class="btn ghost" onclick="openModal('glassModal')">Настройки</button>
         </div>
-        <label>Выберите стекло</label>
+        <label>Выберите стекло (10 мм / триплекс)</label>
         <select id="glass" onchange="calc()"></select>
         <div class="glass-swatch" id="glassSwatchCard">
           <div class="glass-preview-pill swatch-classic" id="glassSwatchPill"></div>
@@ -538,7 +552,85 @@ function renderCategoryContent() {
         <div class="hint" id="railHint"></div>
       </section>
     `;
+  } else if (cat === 'balconies') {
+    // 2. Балконные ограждения (Только прямоугольники: Длина в м.пог. + Высота в мм -> Длина * Высота)
+    html += `
+      <!-- Step 0: Размеры балконного ограждения -->
+      <section class="card highlight">
+        <div class="head">
+          <h2><span class="n"><img src="cat_icon_balcony.png" class="pos-tab-img" alt=""></span>Размеры балкона</h2>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label>Длина ограждения</label>
+            <div class="input-wrap">
+              <input type="number" id="balconyLen" placeholder="0" min="0" step="0.01" oninput="calc()">
+              <span class="unit">м.пог</span>
+            </div>
+            <div class="hint">Общая длина прямого контура</div>
+          </div>
+          <div class="field">
+            <label>Высота стекла</label>
+            <div class="input-wrap">
+              <input type="number" id="balconyHeightMm" placeholder="1000" min="100" step="10" oninput="calc()">
+              <span class="unit">мм</span>
+            </div>
+            <div class="hint">Стандарт: 1000–1200 мм</div>
+          </div>
+          <div class="field">
+            <label>Расчётная площадь</label>
+            <div class="input-wrap">
+              <input type="number" id="balconyArea" placeholder="0" readonly>
+              <span class="unit">м²</span>
+            </div>
+            <div class="hint" id="balconyAreaHint">Длина × Высота</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 1: Тип стекла -->
+      <section class="card">
+        <div class="head">
+          <h2><span class="n">1</span>Тип стекла</h2>
+          <button class="btn ghost" onclick="openModal('glassModal')">Настройки</button>
+        </div>
+        <label>Выберите стекло (10 мм / триплекс)</label>
+        <select id="balconyGlass" onchange="calc()"></select>
+        <div class="glass-swatch" id="glassSwatchCard">
+          <div class="glass-preview-pill swatch-classic" id="glassSwatchPill"></div>
+          <div>
+            <div style="font-weight:700;font-size:13.5px;" id="glassSwatchTitle">Стекло 10 мм</div>
+            <div class="hint" id="glassHint" style="margin-top:2px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: Фурнитура балкона -->
+      <section class="card">
+        <div class="head">
+          <h2><span class="n">2</span>Фурнитура</h2>
+          <button class="btn ghost" onclick="openModal('hardModal')">Настройки</button>
+        </div>
+        <div id="hardList"></div>
+      </section>
+
+      <!-- Step 3: Поручень -->
+      <section class="card">
+        <div class="head">
+          <h2><span class="n">3</span>Поручень</h2>
+          <button class="btn ghost" onclick="openModal('railModal')">Настройки</button>
+        </div>
+        <label>Тип поручня</label>
+        <select id="railSelect" onchange="calc()"></select>
+        <div class="grid" style="margin-top:12px">
+          <div class="field"><label>Длина</label><div class="input-wrap"><input type="number" id="railLength" placeholder="—" min="0" step="0.1" oninput="calc()"><span class="unit">м.пог</span></div></div>
+          <div class="field"><label>Сумма вручную</label><div class="input-wrap"><input type="number" id="railManual" placeholder="авто" min="0" step="100" oninput="calc()"><span class="unit">₽</span></div></div>
+        </div>
+        <div class="hint" id="railHint"></div>
+      </section>
+    `;
   } else if (cat === 'showers') {
+    // 3. Душевые ограждения (8 мм)
     html += `
       <!-- Step 1: Размеры душевого ограждения -->
       <section class="card highlight">
@@ -592,6 +684,7 @@ function renderCategoryContent() {
       </section>
     `;
   } else if (cat === 'loft') {
+    // 4. Лофт-перегородки (6 мм)
     html += `
       <!-- Step 1: Размеры лофт-перегородки -->
       <section class="card highlight">
@@ -661,25 +754,22 @@ function renderCategoryContent() {
 
 function buildActiveSelects() {
   const cat = activeCategory;
-  if (cat === 'railings' || cat === 'balconies') {
+  if (cat === 'railings') {
     const s = el('glass');
-    if (s) {
-      s.innerHTML = Object.keys(D[cat].glass).map(k => `<option value="${k}">${k}</option>`).join('');
-    }
+    if (s) s.innerHTML = Object.keys(D.railings.glass).map(k => `<option value="${k}">${k}</option>`).join('');
     const r = el('railSelect');
-    if (r) {
-      r.innerHTML = D[cat].rail.map(item => `<option value="${item.name}">${item.price > 0 ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
-    }
+    if (r) r.innerHTML = D.railings.rail.map(item => `<option value="${item.name}">${item.price > 0 ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
+  } else if (cat === 'balconies') {
+    const s = el('balconyGlass');
+    if (s) s.innerHTML = Object.keys(D.balconies.glass).map(k => `<option value="${k}">${k} — ${fmt(D.balconies.glass[k].price)} ₽/м²</option>`).join('');
+    const r = el('railSelect');
+    if (r) r.innerHTML = D.balconies.rail.map(item => `<option value="${item.name}">${item.price > 0 ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
   } else if (cat === 'showers') {
     const s = el('shGlass');
-    if (s) {
-      s.innerHTML = Object.keys(D.showers.glass).map(k => `<option value="${k}">${k} — ${fmt(D.showers.glass[k].price)} ₽/м²</option>`).join('');
-    }
+    if (s) s.innerHTML = Object.keys(D.showers.glass).map(k => `<option value="${k}">${k} — ${fmt(D.showers.glass[k].price)} ₽/м²</option>`).join('');
   } else if (cat === 'loft') {
     const s = el('loftGlass');
-    if (s) {
-      s.innerHTML = Object.keys(D.loft.glass).map(k => `<option value="${k}">${k} — ${fmt(D.loft.glass[k].price)} ₽/м²</option>`).join('');
-    }
+    if (s) s.innerHTML = Object.keys(D.loft.glass).map(k => `<option value="${k}">${k} — ${fmt(D.loft.glass[k].price)} ₽/м²</option>`).join('');
   }
 }
 
@@ -767,12 +857,19 @@ function calculateCategoryData(cat) {
     let glassSum = 0;
     let glassName = '';
 
-    if (cat === 'railings' || cat === 'balconies') {
-      glassName = pos.glass || Object.keys(D[cat].glass)[0];
-      const g = D[cat].glass[glassName] || { trap: 0, rect: 0 };
+    if (cat === 'railings') {
+      glassName = pos.glass || Object.keys(D.railings.glass)[0];
+      const g = D.railings.glass[glassName] || { trap: 0, rect: 0 };
       const trapA = parseFloat(pos.trapArea) || 0;
       const rectA = parseFloat(pos.rectArea) || 0;
       glassSum = roundUp500(trapA * g.trap + rectA * g.rect);
+    } else if (cat === 'balconies') {
+      glassName = pos.glass || Object.keys(D.balconies.glass)[0];
+      const g = D.balconies.glass[glassName] || { price: 10000 };
+      const bLen = parseFloat(pos.length) || 0;
+      const bH = parseFloat(pos.heightMm) || 1000;
+      const totalArea = bLen > 0 ? bLen * (bH / 1000) : 0;
+      glassSum = roundUp500(totalArea * (g.price || 10000));
     } else if (cat === 'showers') {
       glassName = pos.glass || Object.keys(D.showers.glass)[0];
       const g = D.showers.glass[glassName] || { price: 0 };
@@ -852,12 +949,22 @@ function calc() {
   const curItem = appState[curCat][curPIdx];
 
   // Active Category & Glass info update
-  if (curCat === 'railings' || curCat === 'balconies') {
-    const gName = curItem.glass || Object.keys(D[curCat].glass)[0];
-    const g = D[curCat].glass[gName] || { trap: 0, rect: 0 };
+  if (curCat === 'railings') {
+    const gName = curItem.glass || Object.keys(D.railings.glass)[0];
+    const g = D.railings.glass[gName] || { trap: 0, rect: 0 };
     if (el('trapPrice')) el('trapPrice').value = g.trap;
     if (el('rectPrice')) el('rectPrice').value = g.rect;
     if (el('glassHint')) el('glassHint').textContent = `Трапеции — ${fmt(g.trap)} ₽/м² · Прямоугольники — ${fmt(g.rect)} ₽/м²`;
+    updateGlassSwatch(gName);
+  } else if (curCat === 'balconies') {
+    const gName = curItem.glass || Object.keys(D.balconies.glass)[0];
+    const g = D.balconies.glass[gName] || { price: 10000 };
+    const bLen = parseFloat(curItem.length) || 0;
+    const bH = parseFloat(curItem.heightMm) || 1000;
+    const bArea = bLen > 0 ? +(bLen * (bH / 1000)).toFixed(2) : 0;
+    if (el('balconyArea')) el('balconyArea').value = bArea > 0 ? bArea : '';
+    if (el('balconyAreaHint')) el('balconyAreaHint').textContent = bLen > 0 ? `${bLen} м × ${bH} мм = ${bArea} м²` : 'Длина × Высота';
+    if (el('glassHint')) el('glassHint').textContent = `Цена стекла — ${fmt(g.price || 10000)} ₽/м²`;
     updateGlassSwatch(gName);
   } else if (curCat === 'showers') {
     const gName = curItem.glass || Object.keys(D.showers.glass)[0];
@@ -1259,7 +1366,7 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
         <td>${s.name}</td>
         <td class="c">компл.</td>
         <td class="c">1</td>
-        <td class="r">${rub(roundedV)}</td>
+        <td class="r">${sr.priceStr || rub(roundedV)}</td>
         <td class="r">${rub(roundedV)}</td>
       </tr>`;
     }
@@ -1538,12 +1645,12 @@ function renderGlassSettings() {
   };
   if (title) title.textContent = catTitles[cat] || 'Типы стекла';
 
-  if (cat === 'railings' || cat === 'balconies') {
+  if (cat === 'railings') {
     el('eGlass').innerHTML = Object.keys(glassData).map(k => `
       <div class="srow three">
         <span>${k}</span>
-        <input type="number" value="${glassData[k].trap}" step="100" onchange="D['${cat}'].glass['${esc(k)}'].trap=+this.value||0; buildActiveSelects(); autoSave(); calc();">
-        <input type="number" value="${glassData[k].rect}" step="100" onchange="D['${cat}'].glass['${esc(k)}'].rect=+this.value||0; buildActiveSelects(); autoSave(); calc();">
+        <input type="number" value="${glassData[k].trap}" step="100" onchange="D.railings.glass['${esc(k)}'].trap=+this.value||0; buildActiveSelects(); autoSave(); calc();">
+        <input type="number" value="${glassData[k].rect}" step="100" onchange="D.railings.glass['${esc(k)}'].rect=+this.value||0; buildActiveSelects(); autoSave(); calc();">
         <button class="btn b-red" onclick="delGlass('${esc(k)}')">✕</button>
       </div>`).join('');
     el('glassModalActions').innerHTML = `
@@ -1647,8 +1754,8 @@ function addGlass() {
   const n = el('ngName').value.trim();
   if (!n) return alert('Введите название');
   if (D[cat].glass[n]) return alert('Уже есть такая позиция');
-  if (cat === 'railings' || cat === 'balconies') {
-    D[cat].glass[n] = { trap: +el('ngTrap').value || 0, rect: +el('ngRect').value || 0 };
+  if (cat === 'railings') {
+    D.railings.glass[n] = { trap: +el('ngTrap').value || 0, rect: +el('ngRect').value || 0 };
   } else {
     D[cat].glass[n] = { price: +el('ngPrice').value || 0 };
   }
@@ -1676,7 +1783,7 @@ function addService() {
 }
 
 function autoSave() {
-  localStorage.setItem('glassloft_multi_calc_v4', JSON.stringify(D));
+  localStorage.setItem('glassloft_multi_calc_v5', JSON.stringify(D));
 }
 
 function saveAll() {
