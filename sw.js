@@ -21,6 +21,7 @@ const ASSETS_TO_CACHE = [
   './kp_icon_tel.png',
   './kp_watermark.png',
   './cat_icon_stairs.png',
+  './cat_icon_balcony.png',
   './cat_icon_shower.png',
   './cat_icon_loft.png'
 ];
