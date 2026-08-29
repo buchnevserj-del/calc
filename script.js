@@ -1641,6 +1641,11 @@ function init() {
   if (el('instPct')) el('instPct').value = D.misc.instPct;
   calc();
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
+
+  // Register PWA ServiceWorker for 100% offline support
+  if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
 }
 
 init();
