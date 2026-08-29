@@ -97,47 +97,6 @@
         </div>
       </section>
 
-      <!-- Global Section: Монтажные работы -->
-      <section class="card">
-        <div class="head">
-          <h2><span class="n">🛠️</span>Монтажные работы</h2>
-          <button class="btn ghost" onclick="openModal('installModal')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            Настройки
-          </button>
-        </div>
-        <label class="switch-wrap">
-          <div class="switch">
-            <input type="checkbox" id="instOn" checked onchange="calc()">
-            <span class="slider"></span>
-          </div>
-          <span>Включить в расчёт</span>
-        </label>
-        <div class="grid">
-          <div class="field">
-            <label>Способ расчёта</label>
-            <select id="instMode" onchange="calc()">
-              <option value="fix">Фиксированная сумма, ₽</option>
-              <option value="pct">Процент от стоимости изделий</option>
-            </select>
-          </div>
-          <div class="field" id="instFixWrap">
-            <label>Сумма монтажа</label>
-            <div class="input-wrap">
-              <input type="number" id="instFix" min="0" step="500" oninput="calc()">
-              <span class="unit">₽</span>
-            </div>
-          </div>
-          <div class="field" id="instPctWrap" style="display:none">
-            <label>Процент от изделий</label>
-            <div class="input-wrap">
-              <input type="number" id="instPct" min="0" step="1" oninput="calc()">
-              <span class="unit">%</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- Global Section: Дополнительные услуги -->
       <section class="card">
         <div class="head">

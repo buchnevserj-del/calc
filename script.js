@@ -114,7 +114,7 @@ let D = JSON.parse(JSON.stringify(DEF));
 // Load saved config
 function loadSavedConfig() {
   try {
-    const saved = localStorage.getItem('glassloft_multi_calc_v5');
+    const saved = localStorage.getItem('glassloft_multi_calc_v6');
     if (saved) {
       const p = JSON.parse(saved);
       if (p.railings) D.railings = p.railings;
@@ -132,8 +132,8 @@ if (!D.misc.pin) D.misc.pin = '0120';
 
 let termManual = false;
 
-/* Multi-Product State across 4 Categories */
-let activeCategory = 'railings'; // 'railings' | 'balconies' | 'showers' | 'loft'
+/* Multi-Product State with Per-Item Installation */
+let activeCategory = 'railings';
 
 let appState = {
   railings: [
@@ -143,7 +143,8 @@ let appState = {
       trapLen: "", rectLen: "", trapArea: "", rectArea: "",
       glass: "Классическое прозрачное (зеленоватая кромка), 10 мм",
       hardQty: {}, hardSum: {},
-      railSelect: "Без поручня", railLength: "", railManual: ""
+      railSelect: "Без поручня", railLength: "", railManual: "",
+      instOn: true, instMode: "fix", instFix: 35000, instPct: 30
     }
   ],
   balconies: [
@@ -153,7 +154,8 @@ let appState = {
       length: "", heightMm: "1000",
       glass: "Классическое прозрачное (зеленоватая кромка), 10 мм",
       hardQty: {}, hardSum: {},
-      railSelect: "Без поручня", railLength: "", railManual: ""
+      railSelect: "Без поручня", railLength: "", railManual: "",
+      instOn: true, instMode: "fix", instFix: 35000, instPct: 30
     }
   ],
   showers: [
@@ -162,7 +164,8 @@ let appState = {
       name: "Душевое ограждение 1",
       fixedArea: "", doorArea: "",
       glass: "Классическое прозрачное (закаленное), 8 мм",
-      hardQty: {}, hardSum: {}
+      hardQty: {}, hardSum: {},
+      instOn: true, instMode: "fix", instFix: 15000, instPct: 30
     }
   ],
   loft: [
@@ -171,7 +174,8 @@ let appState = {
       name: "Лофт-перегородка 1",
       area: "", profileLen: "", gridLen: "",
       glass: "Классическое прозрачное (закаленное), 6 мм",
-      hardQty: {}, hardSum: {}
+      hardQty: {}, hardSum: {},
+      instOn: true, instMode: "fix", instFix: 25000, instPct: 30
     }
   ]
 };
@@ -283,6 +287,12 @@ function syncCurrentInputsToState() {
     item.hardSum = {};
     document.querySelectorAll('.hardSum').forEach(inp => { item.hardSum[inp.dataset.idx] = inp.value; });
   }
+
+  // Installation per item
+  item.instOn = el('posInstOn') ? el('posInstOn').checked : true;
+  item.instMode = el('posInstMode') ? el('posInstMode').value : 'fix';
+  item.instFix = el('posInstFix') ? el('posInstFix').value : (item.instFix || D.misc.instFix || 35000);
+  item.instPct = el('posInstPct') ? el('posInstPct').value : (item.instPct || D.misc.instPct || 30);
 }
 
 function loadStateToInputs() {
@@ -324,6 +334,15 @@ function loadStateToInputs() {
   document.querySelectorAll('.hardSum').forEach(inp => {
     inp.value = (item.hardSum && item.hardSum[inp.dataset.idx]) || '';
   });
+
+  // Installation per item
+  if (el('posInstOn')) el('posInstOn').checked = item.instOn !== false;
+  if (el('posInstMode')) el('posInstMode').value = item.instMode || 'fix';
+  if (el('posInstFix')) el('posInstFix').value = item.instFix !== undefined ? item.instFix : (D.misc.instFix || 35000);
+  if (el('posInstPct')) el('posInstPct').value = item.instPct !== undefined ? item.instPct : (D.misc.instPct || 30);
+  const mode = item.instMode || 'fix';
+  if (el('posInstFixWrap')) el('posInstFixWrap').style.display = mode === 'fix' ? 'block' : 'none';
+  if (el('posInstPctWrap')) el('posInstPctWrap').style.display = mode === 'pct' ? 'block' : 'none';
 
   const nameInp = el('posNameInput');
   if (nameInp) nameInp.value = item.name || `Позиция ${pIdx + 1}`;
@@ -384,7 +403,8 @@ function addPosition() {
       trapLen: '', rectLen: '', trapArea: '', rectArea: '',
       glass: Object.keys(D.railings.glass)[0],
       hardQty: {}, hardSum: {},
-      railSelect: 'Без поручня', railLength: '', railManual: ''
+      railSelect: 'Без поручня', railLength: '', railManual: '',
+      instOn: true, instMode: 'fix', instFix: 35000, instPct: 30
     };
   } else if (cat === 'balconies') {
     newPos = {
@@ -393,7 +413,8 @@ function addPosition() {
       length: '', heightMm: '1000',
       glass: Object.keys(D.balconies.glass)[0],
       hardQty: {}, hardSum: {},
-      railSelect: 'Без поручня', railLength: '', railManual: ''
+      railSelect: 'Без поручня', railLength: '', railManual: '',
+      instOn: true, instMode: 'fix', instFix: 35000, instPct: 30
     };
   } else if (cat === 'showers') {
     newPos = {
@@ -401,7 +422,8 @@ function addPosition() {
       name: `Душевое ограждение ${nextNum}`,
       fixedArea: '', doorArea: '',
       glass: Object.keys(D.showers.glass)[0],
-      hardQty: {}, hardSum: {}
+      hardQty: {}, hardSum: {},
+      instOn: true, instMode: 'fix', instFix: 15000, instPct: 30
     };
   } else {
     newPos = {
@@ -409,7 +431,8 @@ function addPosition() {
       name: `Лофт-перегородка ${nextNum}`,
       area: '', profileLen: '', gridLen: '',
       glass: Object.keys(D.loft.glass)[0],
-      hardQty: {}, hardSum: {}
+      hardQty: {}, hardSum: {},
+      instOn: true, instMode: 'fix', instFix: 25000, instPct: 30
     };
   }
 
@@ -445,6 +468,49 @@ function onPositionNameChange() {
   calc();
 }
 
+function getPositionInstallHtml(item) {
+  const mode = item.instMode || 'fix';
+  return `
+    <!-- Step: Монтажные работы по позиции -->
+    <section class="card">
+      <div class="head">
+        <h2><span class="n">🛠️</span>Монтажные работы</h2>
+        <button class="btn ghost" onclick="openModal('installModal')">Настройки</button>
+      </div>
+      <label class="switch-wrap">
+        <div class="switch">
+          <input type="checkbox" id="posInstOn" ${item.instOn !== false ? 'checked' : ''} onchange="calc()">
+          <span class="slider"></span>
+        </div>
+        <span>Включить монтаж в расчёт</span>
+      </label>
+      <div class="grid">
+        <div class="field">
+          <label>Способ расчёта монтажа</label>
+          <select id="posInstMode" onchange="calc()">
+            <option value="fix" ${mode === 'fix' ? 'selected' : ''}>Фиксированная сумма, ₽</option>
+            <option value="pct" ${mode === 'pct' ? 'selected' : ''}>Процент от материалов (%)</option>
+          </select>
+        </div>
+        <div class="field" id="posInstFixWrap" style="display:${mode === 'pct' ? 'none' : 'block'}">
+          <label>Сумма монтажа</label>
+          <div class="input-wrap">
+            <input type="number" id="posInstFix" value="${item.instFix !== undefined ? item.instFix : 35000}" min="0" step="500" oninput="calc()">
+            <span class="unit">₽</span>
+          </div>
+        </div>
+        <div class="field" id="posInstPctWrap" style="display:${mode === 'pct' ? 'block' : 'none'}">
+          <label>Процент от материалов</label>
+          <div class="input-wrap">
+            <input type="number" id="posInstPct" value="${item.instPct !== undefined ? item.instPct : 30}" min="0" step="1" oninput="calc()">
+            <span class="unit">%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 /* --- Render Category-Specific UI HTML --- */
 function renderCategoryContent() {
   const container = el('dynamicCategoryContent');
@@ -465,7 +531,6 @@ function renderCategoryContent() {
   `;
 
   if (cat === 'railings') {
-    // 1. Лестничные ограждения (Трапеции + Прямоугольники)
     html += `
       <!-- Step 0: Длина ограждения -->
       <section class="card highlight">
@@ -551,9 +616,10 @@ function renderCategoryContent() {
         </div>
         <div class="hint" id="railHint"></div>
       </section>
+
+      ${getPositionInstallHtml(curPos)}
     `;
   } else if (cat === 'balconies') {
-    // 2. Балконные ограждения (Только прямоугольники: Длина в м.пог. + Высота в мм -> Длина * Высота)
     html += `
       <!-- Step 0: Размеры балконного ограждения -->
       <section class="card highlight">
@@ -605,7 +671,7 @@ function renderCategoryContent() {
         </div>
       </section>
 
-      <!-- Step 2: Фурнитура балкона -->
+      <!-- Step 2: Фурнитура -->
       <section class="card">
         <div class="head">
           <h2><span class="n">2</span>Фурнитура</h2>
@@ -628,9 +694,10 @@ function renderCategoryContent() {
         </div>
         <div class="hint" id="railHint"></div>
       </section>
+
+      ${getPositionInstallHtml(curPos)}
     `;
   } else if (cat === 'showers') {
-    // 3. Душевые ограждения (8 мм)
     html += `
       <!-- Step 1: Размеры душевого ограждения -->
       <section class="card highlight">
@@ -682,9 +749,10 @@ function renderCategoryContent() {
         </div>
         <div id="hardList"></div>
       </section>
+
+      ${getPositionInstallHtml(curPos)}
     `;
   } else if (cat === 'loft') {
-    // 4. Лофт-перегородки (6 мм)
     html += `
       <!-- Step 1: Размеры лофт-перегородки -->
       <section class="card highlight">
@@ -744,6 +812,8 @@ function renderCategoryContent() {
         </div>
         <div id="hardList"></div>
       </section>
+
+      ${getPositionInstallHtml(curPos)}
     `;
   }
 
@@ -847,7 +917,7 @@ function calcFromLength() {
   calc();
 }
 
-/* --- Calculation Engine Across All Categories & Positions --- */
+/* --- Calculation Engine with Per-Item Installation --- */
 function calculateCategoryData(cat) {
   const positions = appState[cat] || [];
   const calcPositions = [];
@@ -920,7 +990,23 @@ function calculateCategoryData(cat) {
       railTotal = roundUp500(rawRailSum);
     }
 
-    const posTotal = glassSum + hardTotal + railTotal;
+    const posMaterials = glassSum + hardTotal + railTotal;
+
+    // Per-Position Installation (only if item has materials > 0)
+    let posInstSum = 0;
+    const isInstOn = pos.instOn !== false;
+    if (isInstOn && posMaterials > 0) {
+      const iMode = pos.instMode || 'fix';
+      if (iMode === 'pct') {
+        const pctVal = parseFloat(pos.instPct) || 30;
+        posInstSum = roundUp500(posMaterials * pctVal / 100);
+      } else {
+        const fixVal = parseFloat(pos.instFix);
+        posInstSum = roundUp500(isNaN(fixVal) ? (D.misc.instFix || 35000) : fixVal);
+      }
+    }
+
+    const posTotal = posMaterials + posInstSum;
     categoryTotal += posTotal;
 
     calcPositions.push({
@@ -934,6 +1020,9 @@ function calculateCategoryData(cat) {
       hasRail,
       railName,
       railTotal,
+      posMaterials,
+      isInstOn,
+      posInstSum,
       posTotal
     });
   });
@@ -986,18 +1075,9 @@ function calc() {
 
   const allCategoriesTotal = resRailings.categoryTotal + resBalconies.categoryTotal + resShowers.categoryTotal + resLoft.categoryTotal;
 
-  // Global Services
+  // Global Services (Delivery & Add. services)
   const rawDelSum = el('delOn').checked ? num('delPrice') : 0;
   const delSum = roundUp500(rawDelSum);
-
-  const mode = el('instMode').value;
-  el('instFixWrap').style.display = mode === 'fix' ? 'block' : 'none';
-  el('instPctWrap').style.display = mode === 'pct' ? 'block' : 'none';
-  let rawInstSum = 0;
-  if (el('instOn').checked) {
-    rawInstSum = mode === 'fix' ? num('instFix') : (allCategoriesTotal * num('instPct') / 100);
-  }
-  const instSum = roundUp500(rawInstSum);
 
   let servSum = 0;
   const servLines = [];
@@ -1013,7 +1093,7 @@ function calc() {
     }
   });
 
-  const total = allCategoriesTotal + delSum + instSum + servSum;
+  const total = allCategoriesTotal + delSum + servSum;
 
   el('sum').textContent = rub(total);
   const floatEl = el('floatingSum');
@@ -1055,7 +1135,7 @@ function calc() {
   if (el('termHint')) {
     el('termHint').textContent = termManual
       ? 'Срок задан вручную'
-      : (hasTriplex ? `Авто: триплекс — ${termTriplexDays} раб. дней (макс.)` : `Авто: обычное стекло — ${termGlassDays} раб. день`);
+      : (hasTriplex ? `Авто: триплекс — ${termTriplexDays} раб. дней (макс.)` : `Авто: стекло 10 мм — ${termGlassDays} раб. день`);
   }
 
   // Render proposal text
@@ -1066,6 +1146,7 @@ function calc() {
     const curCP = calculateCategoryData(curCat).calcPositions[curPIdx];
     t += `${counter++}. Стекло закаленное ${curCP.glassName} — ${rub(curCP.glassSum)}\n`;
     t += `${counter++}. Комплект фурнитуры — ${rub(curCP.hardTotal)}\n`;
+    t += `${counter++}. Монтажные работы — ${curCP.isInstOn ? (curCP.posInstSum > 0 ? rub(curCP.posInstSum) : '0 ₽') : 'не требуются'}\n`;
   } else if (activeCalculated.length === 1) {
     const cp = activeCalculated[0];
     t += `${counter++}. Стекло закаленное ${cp.glassName} — ${rub(cp.glassSum)}\n`;
@@ -1075,6 +1156,7 @@ function calc() {
     if (cp.hasRail) {
       t += `${counter++}. Поручень: ${cp.railName} — ${rub(cp.railTotal)}\n`;
     }
+    t += `${counter++}. Монтажные работы — ${cp.isInstOn ? (cp.posInstSum > 0 ? rub(cp.posInstSum) : '0 ₽') : 'не требуются'}\n`;
   } else {
     activeCalculated.forEach((cp, idx) => {
       t += `ПОЗИЦИЯ ${idx + 1}: ${cp.pos.name || `Изделие ${idx + 1}`}\n`;
@@ -1083,12 +1165,12 @@ function calc() {
       if (cp.hasRail) {
         t += `  • Поручень: ${cp.railName} — ${rub(cp.railTotal)}\n`;
       }
+      t += `  • Монтажные работы — ${cp.isInstOn ? (cp.posInstSum > 0 ? rub(cp.posInstSum) : '0 ₽') : 'не требуются'}\n`;
       t += `  Итого за позицию — ${rub(cp.posTotal)}\n\n`;
     });
   }
 
   t += `${counter++}. Доставка, разгрузка — ${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}\n`;
-  t += `${counter++}. Монтажные работы — ${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : 'не требуются'}\n`;
   servLines.forEach(line => { t += `${counter++}. ${line}\n`; });
 
   t += `\nИтого общая стоимость — ${fmt(total)} рублей.\n`;
@@ -1318,6 +1400,14 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
         <td class="r">${rub(cp.railTotal)}</td>
       </tr>`;
     }
+
+    rowsHtml += `<tr>
+      <td>Монтажные работы</td>
+      <td class="c">компл.</td>
+      <td class="c">1</td>
+      <td class="r">${cp.isInstOn ? (cp.posInstSum > 0 ? rub(cp.posInstSum) : '0 ₽') : 'не требуются'}</td>
+      <td class="r">${cp.isInstOn ? (cp.posInstSum > 0 ? rub(cp.posInstSum) : '0 ₽') : '0 ₽'}</td>
+    </tr>`;
   } else {
     activeList.forEach((cp, idx) => {
       subtotalItems += cp.posTotal;
@@ -1351,6 +1441,14 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
           <td class="r">${rub(cp.railTotal)}</td>
         </tr>`;
       }
+
+      rowsHtml += `<tr>
+        <td>Монтажные работы (${cp.pos.name || `Позиция ${idx + 1}`})</td>
+        <td class="c">компл.</td>
+        <td class="c">1</td>
+        <td class="r">${cp.isInstOn ? (cp.posInstSum > 0 ? rub(cp.posInstSum) : '0 ₽') : 'не требуются'}</td>
+        <td class="r">${cp.isInstOn ? (cp.posInstSum > 0 ? rub(cp.posInstSum) : '0 ₽') : '0 ₽'}</td>
+      </tr>`;
     });
 
     rowsHtml += `<tr class="kp-sec-hdr"><td colspan="5">ОБЩИЕ УСЛУГИ:</td></tr>`;
@@ -1363,23 +1461,8 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
     <td>Доставка, разгрузка</td>
     <td class="c">компл.</td>
     <td class="c">1</td>
-    <td class="r">${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}</td>
+    <td class="r">${el('delOn').checked ? (delSum > 0 ? rub(delSum) : 'не требуется') : 'не требуется'}</td>
     <td class="r">${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : '0 ₽'}</td>
-  </tr>`;
-
-  // Install
-  const mode = el('instMode').value;
-  let rawInstSum = 0;
-  if (el('instOn').checked) {
-    rawInstSum = mode === 'fix' ? num('instFix') : (subtotalItems * num('instPct') / 100);
-  }
-  const instSum = roundUp500(rawInstSum);
-  rowsHtml += `<tr>
-    <td>Монтажные работы</td>
-    <td class="c">компл.</td>
-    <td class="c">1</td>
-    <td class="r">${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : 'не требуются'}</td>
-    <td class="r">${el('instOn').checked ? (instSum > 0 ? rub(instSum) : '0 ₽') : '0 ₽'}</td>
   </tr>`;
 
   // Services
@@ -1396,13 +1479,13 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
         <td>${s.name}</td>
         <td class="c">компл.</td>
         <td class="c">1</td>
-        <td class="r">${sr.priceStr || rub(roundedV)}</td>
+        <td class="r">${rub(roundedV)}</td>
         <td class="r">${rub(roundedV)}</td>
       </tr>`;
     }
   });
 
-  const total = subtotalItems + delSum + instSum + servSum;
+  const total = subtotalItems + delSum + servSum;
 
   const termGlassDays = (D.misc && D.misc.termGlass) ? parseInt(D.misc.termGlass, 10) : 21;
   const termTriplexDays = (D.misc && D.misc.termTripl) ? parseInt(D.misc.termTripl, 10) : 25;
@@ -1822,7 +1905,7 @@ function addService() {
 }
 
 function autoSave() {
-  localStorage.setItem('glassloft_multi_calc_v5', JSON.stringify(D));
+  localStorage.setItem('glassloft_multi_calc_v6', JSON.stringify(D));
 }
 
 function saveAll() {
@@ -1837,8 +1920,6 @@ function init() {
   renderPositionTabs();
   buildServiceList();
   if (el('delPrice')) el('delPrice').value = D.misc.delivery;
-  if (el('instFix')) el('instFix').value = D.misc.instFix;
-  if (el('instPct')) el('instPct').value = D.misc.instPct;
   calc();
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
