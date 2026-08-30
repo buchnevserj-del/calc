@@ -917,8 +917,55 @@ function calcFromLength() {
   calc();
 }
 
+let adjMode = 'none'; // 'none' | 'discount' | 'markup'
+
+function setAdjMode(mode) {
+  adjMode = mode;
+  const tabNone = el('dmTabNone');
+  const tabDisc = el('dmTabDiscount');
+  const tabMark = el('dmTabMarkup');
+  const inputWrap = el('dmInputWrap');
+  const inputLabel = el('dmInputLabel');
+  const pctInp = el('adjPercent');
+
+  [tabNone, tabDisc, tabMark].forEach(t => {
+    if (t) t.className = 'dm-tab';
+  });
+
+  if (mode === 'discount') {
+    if (tabDisc) tabDisc.classList.add('active-discount');
+    if (inputWrap) inputWrap.style.display = 'block';
+    if (inputLabel) inputLabel.textContent = 'Размер скидки, %';
+    if (pctInp && !pctInp.value) pctInp.value = '10';
+  } else if (mode === 'markup') {
+    if (tabMark) tabMark.classList.add('active-markup');
+    if (inputWrap) inputWrap.style.display = 'block';
+    if (inputLabel) inputLabel.textContent = 'Размер наценки / бонуса, %';
+    if (pctInp && !pctInp.value) pctInp.value = '15';
+  } else {
+    if (tabNone) tabNone.classList.add('active');
+    if (inputWrap) inputWrap.style.display = 'none';
+    if (pctInp) pctInp.value = '';
+  }
+
+  calc();
+}
+
+function getPriceMultiplier() {
+  if (adjMode === 'none') return 1.0;
+  const pct = Math.abs(parseFloat(el('adjPercent') ? el('adjPercent').value : 0)) || 0;
+  if (pct === 0) return 1.0;
+  if (adjMode === 'discount') {
+    return Math.max(0.01, 1 - (pct / 100));
+  } else if (adjMode === 'markup') {
+    return 1 + (pct / 100);
+  }
+  return 1.0;
+}
+
 /* --- Calculation Engine with Per-Item Installation --- */
 function calculateCategoryData(cat) {
+  const mult = getPriceMultiplier();
   const positions = appState[cat] || [];
   const calcPositions = [];
   let categoryTotal = 0;
@@ -932,24 +979,28 @@ function calculateCategoryData(cat) {
       const g = D.railings.glass[glassName] || { trap: 0, rect: 0 };
       const trapA = parseFloat(pos.trapArea) || 0;
       const rectA = parseFloat(pos.rectArea) || 0;
-      glassSum = roundUp500(trapA * g.trap + rectA * g.rect);
+      const raw = trapA * g.trap + rectA * g.rect;
+      glassSum = roundUp500(raw * mult);
     } else if (cat === 'balconies') {
       glassName = pos.glass || Object.keys(D.balconies.glass)[0];
       const g = D.balconies.glass[glassName] || { price: 10000 };
       const bLen = parseFloat(pos.length) || 0;
       const bH = parseFloat(pos.heightMm) || 1000;
       const totalArea = bLen > 0 ? bLen * (bH / 1000) : 0;
-      glassSum = roundUp500(totalArea * (g.price || 10000));
+      const raw = totalArea * (g.price || 10000);
+      glassSum = roundUp500(raw * mult);
     } else if (cat === 'showers') {
       glassName = pos.glass || Object.keys(D.showers.glass)[0];
       const g = D.showers.glass[glassName] || { price: 0 };
       const totalArea = (parseFloat(pos.fixedArea) || 0) + (parseFloat(pos.doorArea) || 0);
-      glassSum = roundUp500(totalArea * g.price);
+      const raw = totalArea * g.price;
+      glassSum = roundUp500(raw * mult);
     } else if (cat === 'loft') {
       glassName = pos.glass || Object.keys(D.loft.glass)[0];
       const g = D.loft.glass[glassName] || { price: 0 };
       const totalArea = parseFloat(pos.area) || 0;
-      glassSum = roundUp500(totalArea * g.price);
+      const raw = totalArea * g.price;
+      glassSum = roundUp500(raw * mult);
     }
 
     // Hardware
@@ -969,7 +1020,7 @@ function calculateCategoryData(cat) {
         hardParts.push(item.name.toLowerCase() + (qty ? ` ${qty} ${item.unit}` : ''));
       }
     });
-    const hardTotal = roundUp500(hardSum);
+    const hardTotal = roundUp500(hardSum * mult);
 
     // Handrail (for railings and balconies)
     let railTotal = 0;
@@ -987,7 +1038,7 @@ function calculateCategoryData(cat) {
         if (railMan !== null) rawRailSum = railMan;
         else if (railLen !== null) rawRailSum = railLen * railItem.price;
       }
-      railTotal = roundUp500(rawRailSum);
+      railTotal = roundUp500(rawRailSum * mult);
     }
 
     const posMaterials = glassSum + hardTotal + railTotal;
@@ -1002,7 +1053,8 @@ function calculateCategoryData(cat) {
         posInstSum = roundUp500(posMaterials * pctVal / 100);
       } else {
         const fixVal = parseFloat(pos.instFix);
-        posInstSum = roundUp500(isNaN(fixVal) ? (D.misc.instFix || 35000) : fixVal);
+        const rawFix = isNaN(fixVal) ? (D.misc.instFix || 35000) : fixVal;
+        posInstSum = roundUp500(rawFix * mult);
       }
     }
 
@@ -1074,10 +1126,11 @@ function calc() {
   const resLoft = calculateCategoryData('loft');
 
   const allCategoriesTotal = resRailings.categoryTotal + resBalconies.categoryTotal + resShowers.categoryTotal + resLoft.categoryTotal;
+  const mult = getPriceMultiplier();
 
   // Global Services (Delivery & Add. services)
   const rawDelSum = el('delOn').checked ? num('delPrice') : 0;
-  const delSum = roundUp500(rawDelSum);
+  const delSum = roundUp500(rawDelSum * mult);
 
   let servSum = 0;
   const servLines = [];
@@ -1087,7 +1140,7 @@ function calc() {
     if (!s) return;
     const v = inp.value.trim() === '' ? null : (parseFloat(inp.value) || 0);
     if (v !== null && v > 0) {
-      const roundedV = roundUp500(v);
+      const roundedV = roundUp500(v * mult);
       servSum += roundedV;
       servLines.push(`${s.name} — ${rub(roundedV)}`);
     }
@@ -1321,6 +1374,7 @@ function getKpFileName(forcedDocNum, isMerged) {
 function updateKpDocumentData(forcedDocNum, isMerged) {
   const dates = getFormattedDates();
   const seqNum = forcedDocNum || currentKpSeqNumber || 1;
+  const mult = getPriceMultiplier();
 
   const clientVal = (el('calcClient') && el('calcClient').value.trim()) || 'Частное лицо';
   const addressVal = (el('calcAddress') && el('calcAddress').value.trim()) || 'г. Санкт-Петербург';
@@ -1456,7 +1510,7 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
 
   // Delivery
   const rawDelSum = el('delOn').checked ? num('delPrice') : 0;
-  const delSum = roundUp500(rawDelSum);
+  const delSum = roundUp500(rawDelSum * mult);
   rowsHtml += `<tr>
     <td>Доставка, разгрузка</td>
     <td class="c">компл.</td>
@@ -1473,7 +1527,7 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
     if (!s) return;
     const v = inp.value.trim() === '' ? null : (parseFloat(inp.value) || 0);
     if (v !== null && v > 0) {
-      const roundedV = roundUp500(v);
+      const roundedV = roundUp500(v * mult);
       servSum += roundedV;
       rowsHtml += `<tr>
         <td>${s.name}</td>

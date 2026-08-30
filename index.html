@@ -154,6 +154,27 @@
           <div class="sum" id="sum">0 ₽</div>
         </div>
 
+        <!-- Discount & Markup Adjuster -->
+        <div class="discount-markup-card">
+          <div class="dm-header">
+            <label>Корректировка сметы</label>
+            <div class="dm-segmented">
+              <button type="button" class="dm-tab active" id="dmTabNone" onclick="setAdjMode('none')">0% (Базовая)</button>
+              <button type="button" class="dm-tab" id="dmTabDiscount" onclick="setAdjMode('discount')">🏷️ Скидка (-%)</button>
+              <button type="button" class="dm-tab" id="dmTabMarkup" onclick="setAdjMode('markup')">📈 Наценка (+%)</button>
+            </div>
+          </div>
+          <div class="dm-input-row" id="dmInputWrap" style="display:none;">
+            <div class="field" style="width:100%;">
+              <label id="dmInputLabel">Размер скидки, %</label>
+              <div class="input-wrap">
+                <input type="number" id="adjPercent" placeholder="0" min="0" max="99" step="1" oninput="calc()">
+                <span class="unit">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Client & Address Quick Inputs -->
         <div class="grid" style="margin-bottom: 14px;">
           <div class="field">

@@ -1014,6 +1014,64 @@ input:checked + .slider:before {
   color: var(--primary);
 }
 
+/* Discount & Markup Adjustment Controls */
+.discount-markup-card {
+  background: var(--card-sub);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.dm-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dm-segmented {
+  display: flex;
+  background: #ffffff;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 4px;
+}
+.dm-tab {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 8px 10px;
+  font: 700 12.5px 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.dm-tab:hover {
+  color: var(--text);
+  background: var(--card-sub-alt);
+}
+.dm-tab.active {
+  background: var(--primary-gradient);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2);
+}
+.dm-tab.active-discount {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
+}
+.dm-tab.active-markup {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+.dm-input-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
 /* Choice Modal */
 .choice-card-btn {
   width: 100%;
