@@ -2142,6 +2142,25 @@ function saveAll() {
   showToast('Все настройки и прайс-листы сохранены! 💾');
 }
 
+async function forceAppUpdate() {
+  showToast('Обновление приложения и сброс кэша... ⏳');
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) {
+        await reg.unregister();
+      }
+    }
+  } catch(e) {}
+  setTimeout(() => {
+    window.location.reload(true);
+  }, 400);
+}
+
 /* --- Init --- */
 function init() {
   loadSavedConfig();
@@ -2154,7 +2173,9 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=1.3').then(reg => {
+      reg.update();
+    }).catch(() => {});
   }
 }
 
