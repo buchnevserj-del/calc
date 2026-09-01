@@ -132,6 +132,50 @@ if (!D.misc.pin) D.misc.pin = '0120';
 
 let termManual = false;
 
+/* Multi-Product Section Presets & Default Names */
+const PRESET_SECTION_NAMES = {
+  balconies: [
+    'Балконное ограждение',
+    'Ограждение террасы',
+    'Ограждение веранды',
+    'Ограждение балкона',
+    'Ограждение второго света',
+    'Французский балкон'
+  ],
+  railings: [
+    'Стеклянное ограждение лестницы',
+    'Ограждение лестничного марша',
+    'Перила 2-й этаж',
+    'Ограждение атриума',
+    'Ограждение лестницы'
+  ],
+  showers: [
+    'Душевое ограждение',
+    'Душевая перегородка',
+    'Шторка на ванну',
+    'Душевой уголок',
+    'Душевая кабина'
+  ],
+  loft: [
+    'Лофт-перегородка',
+    'Перегородка в спальню',
+    'Зонирующая перегородка',
+    'Раздвижная лофт-дверь',
+    'Офисная перегородка'
+  ]
+};
+
+function getDefaultPositionName(cat, idx) {
+  const num = (idx || 0) + 1;
+  const defaults = {
+    railings: num === 1 ? 'Стеклянное ограждение лестницы' : `Лестничное ограждение ${num}`,
+    balconies: num === 1 ? 'Балконное ограждение' : `Балконное ограждение ${num}`,
+    showers: num === 1 ? 'Душевое ограждение' : `Душевое ограждение ${num}`,
+    loft: num === 1 ? 'Лофт-перегородка' : `Лофт-перегородка ${num}`
+  };
+  return defaults[cat] || `Позиция ${num}`;
+}
+
 /* Multi-Product State with Per-Item Installation */
 let activeCategory = 'railings';
 
@@ -139,7 +183,7 @@ let appState = {
   railings: [
     {
       id: 1,
-      name: "Лестничное ограждение 1",
+      name: "Стеклянное ограждение лестницы",
       trapLen: "", rectLen: "", trapArea: "", rectArea: "",
       glass: "Классическое прозрачное (зеленоватая кромка), 10 мм",
       hardQty: {}, hardSum: {},
@@ -150,7 +194,7 @@ let appState = {
   balconies: [
     {
       id: 1,
-      name: "Балконное ограждение 1",
+      name: "Балконное ограждение",
       length: "", heightMm: "1000",
       glass: "Классическое прозрачное (зеленоватая кромка), 10 мм",
       hardQty: {}, hardSum: {},
@@ -161,7 +205,7 @@ let appState = {
   showers: [
     {
       id: 1,
-      name: "Душевое ограждение 1",
+      name: "Душевое ограждение",
       fixedArea: "", doorArea: "",
       glass: "Классическое прозрачное (закаленное), 8 мм",
       hardQty: {}, hardSum: {},
@@ -171,7 +215,7 @@ let appState = {
   loft: [
     {
       id: 1,
-      name: "Лофт-перегородка 1",
+      name: "Лофт-перегородка",
       area: "", profileLen: "", gridLen: "",
       glass: "Классическое прозрачное (закаленное), 6 мм",
       hardQty: {}, hardSum: {},
@@ -179,6 +223,27 @@ let appState = {
     }
   ]
 };
+
+function loadSavedAppState() {
+  try {
+    const saved = localStorage.getItem('glassloft_app_state_v6');
+    if (saved) {
+      const p = JSON.parse(saved);
+      if (p && typeof p === 'object') {
+        if (Array.isArray(p.railings) && p.railings.length > 0) appState.railings = p.railings;
+        if (Array.isArray(p.balconies) && p.balconies.length > 0) appState.balconies = p.balconies;
+        if (Array.isArray(p.showers) && p.showers.length > 0) appState.showers = p.showers;
+        if (Array.isArray(p.loft) && p.loft.length > 0) appState.loft = p.loft;
+      }
+    }
+  } catch(e) {}
+}
+
+function saveAppState() {
+  try {
+    localStorage.setItem('glassloft_app_state_v6', JSON.stringify(appState));
+  } catch(e) {}
+}
 
 let activePosIdx = {
   railings: 0,
@@ -199,7 +264,17 @@ const num = id => parseFloat(String((el(id) && el(id).value) || '').replace(',',
 const fmt = n => Math.round(n).toLocaleString('ru-RU');
 const rub = n => fmt(n) + ' ₽';
 const roundUp500 = n => n > 0 ? Math.ceil(n / 500) * 500 : 0;
-const esc = s => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+const esc = s => String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+function focusPosNameInput() {
+  const inp = el('posNameInput');
+  if (inp) {
+    inp.focus();
+    inp.select();
+    inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast('Введите наименование раздела для КП ✏️');
+  }
+}
 
 function updateGlassSwatch(gName) {
   const pill = el('glassSwatchPill');
@@ -242,8 +317,13 @@ function switchCategory(cat) {
 function syncCurrentInputsToState() {
   const cat = activeCategory;
   const pIdx = activePosIdx[cat];
+  if (!appState[cat] || !appState[cat][pIdx]) return;
   const item = appState[cat][pIdx];
-  if (!item) return;
+
+  const nameInp = el('posNameInput');
+  if (nameInp) {
+    item.name = nameInp.value;
+  }
 
   if (cat === 'railings') {
     item.trapLen = el('trapLen') ? el('trapLen').value : '';
@@ -298,8 +378,13 @@ function syncCurrentInputsToState() {
 function loadStateToInputs() {
   const cat = activeCategory;
   const pIdx = activePosIdx[cat];
+  if (!appState[cat] || !appState[cat][pIdx]) return;
   const item = appState[cat][pIdx];
-  if (!item) return;
+
+  const nameInp = el('posNameInput');
+  if (nameInp) {
+    nameInp.value = (item.name !== undefined && item.name !== '') ? item.name : getDefaultPositionName(cat, pIdx);
+  }
 
   if (cat === 'railings') {
     if (el('trapLen')) el('trapLen').value = item.trapLen || '';
@@ -343,9 +428,6 @@ function loadStateToInputs() {
   const mode = item.instMode || 'fix';
   if (el('posInstFixWrap')) el('posInstFixWrap').style.display = mode === 'fix' ? 'block' : 'none';
   if (el('posInstPctWrap')) el('posInstPctWrap').style.display = mode === 'pct' ? 'block' : 'none';
-
-  const nameInp = el('posNameInput');
-  if (nameInp) nameInp.value = item.name || `Позиция ${pIdx + 1}`;
 }
 
 /* --- Multi-Position Tabs for current category --- */
@@ -353,7 +435,7 @@ function renderPositionTabs() {
   const container = el('positionTabs');
   const btnText = el('addPosBtnText');
   const cat = activeCategory;
-  const items = appState[cat];
+  const items = appState[cat] || [];
   if (!container) return;
 
   const catNames = {
@@ -373,18 +455,37 @@ function renderPositionTabs() {
     btnText.textContent = `+ Добавить ${catNames[cat]} №${items.length + 1}`;
   }
 
-  container.innerHTML = items.map((pos, idx) => `
-    <div class="sec-tab ${idx === activePosIdx[cat] ? 'active' : ''}" onclick="switchPosition(${idx})">
-      <span>${catIcons[cat]} ${pos.name || `Позиция ${idx + 1}`}</span>
-      ${items.length > 1 ? `<span class="tab-del-btn" onclick="removePosition(${idx}, event)" title="Удалить позицию">✕</span>` : ''}
-    </div>
-  `).join('');
+  container.innerHTML = items.map((pos, idx) => {
+    const dName = (pos.name && pos.name.trim()) || getDefaultPositionName(cat, idx);
+    return `
+      <div class="sec-tab ${idx === activePosIdx[cat] ? 'active' : ''}" onclick="switchPosition(${idx})">
+        <span>${catIcons[cat]} <span class="sec-tab-text">${esc(dName)}</span></span>
+        ${items.length > 1 ? `<span class="tab-del-btn" onclick="removePosition(${idx}, event)" title="Удалить позицию">✕</span>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function updatePositionTabsText() {
+  const cat = activeCategory;
+  const items = appState[cat] || [];
+  const tabs = document.querySelectorAll('#positionTabs .sec-tab');
+  tabs.forEach((tab, idx) => {
+    if (items[idx]) {
+      const span = tab.querySelector('.sec-tab-text');
+      if (span) {
+        const dName = (items[idx].name && items[idx].name.trim()) || getDefaultPositionName(cat, idx);
+        span.textContent = dName;
+      }
+    }
+  });
 }
 
 function switchPosition(idx) {
   if (idx === activePosIdx[activeCategory]) return;
   syncCurrentInputsToState();
   activePosIdx[activeCategory] = idx;
+  renderCategoryContent();
   renderPositionTabs();
   loadStateToInputs();
   calc();
@@ -394,12 +495,13 @@ function addPosition() {
   syncCurrentInputsToState();
   const cat = activeCategory;
   const nextNum = appState[cat].length + 1;
+  const defaultName = getDefaultPositionName(cat, nextNum - 1);
 
   let newPos;
   if (cat === 'railings') {
     newPos = {
       id: Date.now(),
-      name: `Лестничное ограждение ${nextNum}`,
+      name: defaultName,
       trapLen: '', rectLen: '', trapArea: '', rectArea: '',
       glass: Object.keys(D.railings.glass)[0],
       hardQty: {}, hardSum: {},
@@ -409,7 +511,7 @@ function addPosition() {
   } else if (cat === 'balconies') {
     newPos = {
       id: Date.now(),
-      name: `Балконное ограждение ${nextNum}`,
+      name: defaultName,
       length: '', heightMm: '1000',
       glass: Object.keys(D.balconies.glass)[0],
       hardQty: {}, hardSum: {},
@@ -419,7 +521,7 @@ function addPosition() {
   } else if (cat === 'showers') {
     newPos = {
       id: Date.now(),
-      name: `Душевое ограждение ${nextNum}`,
+      name: defaultName,
       fixedArea: '', doorArea: '',
       glass: Object.keys(D.showers.glass)[0],
       hardQty: {}, hardSum: {},
@@ -428,7 +530,7 @@ function addPosition() {
   } else {
     newPos = {
       id: Date.now(),
-      name: `Лофт-перегородка ${nextNum}`,
+      name: defaultName,
       area: '', profileLen: '', gridLen: '',
       glass: Object.keys(D.loft.glass)[0],
       hardQty: {}, hardSum: {},
@@ -438,10 +540,12 @@ function addPosition() {
 
   appState[cat].push(newPos);
   activePosIdx[cat] = appState[cat].length - 1;
+  renderCategoryContent();
   renderPositionTabs();
   loadStateToInputs();
   calc();
-  showToast(`Добавлена позиция №${nextNum}!`);
+  saveAppState();
+  showToast(`Добавлена позиция: «${defaultName}»!`);
 }
 
 function removePosition(idx, event) {
@@ -452,9 +556,11 @@ function removePosition(idx, event) {
   syncCurrentInputsToState();
   appState[cat].splice(idx, 1);
   activePosIdx[cat] = Math.min(activePosIdx[cat], appState[cat].length - 1);
+  renderCategoryContent();
   renderPositionTabs();
   loadStateToInputs();
   calc();
+  saveAppState();
   showToast('Позиция удалена');
 }
 
@@ -462,10 +568,43 @@ function onPositionNameChange() {
   const nameInp = el('posNameInput');
   const cat = activeCategory;
   const pIdx = activePosIdx[cat];
-  if (!nameInp || !appState[cat][pIdx]) return;
-  appState[cat][pIdx].name = nameInp.value.trim() || `Позиция ${pIdx + 1}`;
-  renderPositionTabs();
+  if (!nameInp || !appState[cat] || !appState[cat][pIdx]) return;
+  
+  appState[cat][pIdx].name = nameInp.value;
+  updatePositionTabsText();
   calc();
+  saveAppState();
+}
+
+function resetPositionName() {
+  const cat = activeCategory;
+  const pIdx = activePosIdx[cat];
+  if (!appState[cat] || !appState[cat][pIdx]) return;
+  
+  const def = getDefaultPositionName(cat, pIdx);
+  appState[cat][pIdx].name = def;
+  const nameInp = el('posNameInput');
+  if (nameInp) nameInp.value = def;
+  
+  updatePositionTabsText();
+  calc();
+  saveAppState();
+  showToast(`Название сброшено: ${def}`);
+}
+
+function applyPresetName(name) {
+  const cat = activeCategory;
+  const pIdx = activePosIdx[cat];
+  if (!appState[cat] || !appState[cat][pIdx]) return;
+  
+  appState[cat][pIdx].name = name;
+  const nameInp = el('posNameInput');
+  if (nameInp) nameInp.value = name;
+  
+  updatePositionTabsText();
+  calc();
+  saveAppState();
+  showToast(`Название раздела: «${name}»`);
 }
 
 function getPositionInstallHtml(item) {
@@ -517,16 +656,35 @@ function renderCategoryContent() {
   if (!container) return;
 
   const cat = activeCategory;
-  const items = appState[cat];
+  const items = appState[cat] || [];
   const pIdx = activePosIdx[cat];
-  const curPos = items[pIdx] || items[0];
+  const curPos = items[pIdx] || items[0] || {};
+  const curName = (curPos.name !== undefined && curPos.name !== '') ? curPos.name : getDefaultPositionName(cat, pIdx);
+  const presets = PRESET_SECTION_NAMES[cat] || [];
 
   let html = '';
 
-  // Position Name Field
+  // Section Name Customizer Card
   html += `
-    <div class="sec-name-row" style="display:${items.length > 1 ? 'flex' : 'none'};">
-      <input type="text" class="sec-name-input" id="posNameInput" placeholder="Название позиции" value="${curPos.name || ''}" oninput="onPositionNameChange()">
+    <div class="sec-title-card">
+      <div class="sec-title-header">
+        <div class="sec-title-label">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          <span>Наименование раздела для КП</span>
+        </div>
+        <span class="sec-title-hint">Отображается в шапке и смете КП</span>
+      </div>
+      <div class="sec-title-input-wrap">
+        <input type="text" class="sec-name-input" id="posNameInput" placeholder="например, Ограждение террасы, Балконное ограждение..." value="${esc(curName)}" oninput="onPositionNameChange()" autocomplete="off">
+        <button type="button" class="btn-reset-name" onclick="resetPositionName()" title="Сбросить к исходному названию">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+          Сброс
+        </button>
+      </div>
+      <div class="sec-title-suggestions">
+        <span class="sec-sugg-title">Быстрый выбор:</span>
+        ${presets.map(p => `<button type="button" class="sec-sugg-chip" onclick="applyPresetName('${esc(p)}')">${esc(p)}</button>`).join('')}
+      </div>
     </div>
   `;
 
@@ -1192,16 +1350,20 @@ function calc() {
   }
 
   // Render proposal text
-  let t = 'Стоимость заказа будет следующей:\n\n';
+  let t = '';
   let counter = 1;
 
   if (activeCalculated.length === 0) {
     const curCP = calculateCategoryData(curCat).calcPositions[curPIdx];
+    const posTitle = (curCP && curCP.pos && curCP.pos.name && curCP.pos.name.trim()) || getDefaultPositionName(curCat, curPIdx);
+    t = `Коммерческое предложение:\n«${posTitle}»\n\n`;
     t += `${counter++}. Стекло закаленное ${curCP.glassName} — ${rub(curCP.glassSum)}\n`;
     t += `${counter++}. Комплект фурнитуры — ${rub(curCP.hardTotal)}\n`;
     t += `${counter++}. Монтажные работы — ${curCP.isInstOn ? (curCP.posInstSum > 0 ? rub(curCP.posInstSum) : '0 ₽') : 'не требуются'}\n`;
   } else if (activeCalculated.length === 1) {
     const cp = activeCalculated[0];
+    const posTitle = (cp.pos && cp.pos.name && cp.pos.name.trim()) || getDefaultPositionName(cp.cat, cp.idx !== undefined ? cp.idx : 0);
+    t = `Коммерческое предложение:\n«${posTitle}»\n\n`;
     t += `${counter++}. Стекло закаленное ${cp.glassName} — ${rub(cp.glassSum)}\n`;
     t += `${counter++}. Комплект фурнитуры`;
     if (cp.parts.length) t += ` (${cp.parts.join(', ')})`;
@@ -1211,15 +1373,17 @@ function calc() {
     }
     t += `${counter++}. Монтажные работы — ${cp.isInstOn ? (cp.posInstSum > 0 ? rub(cp.posInstSum) : '0 ₽') : 'не требуются'}\n`;
   } else {
+    t = 'Стоимость заказа будет следующей:\n\n';
     activeCalculated.forEach((cp, idx) => {
-      t += `ПОЗИЦИЯ ${idx + 1}: ${cp.pos.name || `Изделие ${idx + 1}`}\n`;
+      const posTitle = (cp.pos && cp.pos.name && cp.pos.name.trim()) || getDefaultPositionName(cp.cat, cp.idx !== undefined ? cp.idx : idx);
+      t += `РАЗДЕЛ ${idx + 1}: ${posTitle}\n`;
       t += `  • Стекло закаленное ${cp.glassName} — ${rub(cp.glassSum)}\n`;
       t += `  • Комплект фурнитуры${cp.parts.length ? ` (${cp.parts.join(', ')})` : ''} — ${rub(cp.hardTotal)}\n`;
       if (cp.hasRail) {
         t += `  • Поручень: ${cp.railName} — ${rub(cp.railTotal)}\n`;
       }
       t += `  • Монтажные работы — ${cp.isInstOn ? (cp.posInstSum > 0 ? rub(cp.posInstSum) : '0 ₽') : 'не требуются'}\n`;
-      t += `  Итого за позицию — ${rub(cp.posTotal)}\n\n`;
+      t += `  Итого за раздел — ${rub(cp.posTotal)}\n\n`;
     });
   }
 
@@ -1251,8 +1415,10 @@ function initiateExport(format) {
   const catCount = countConfiguredCategories();
   if (catCount > 1) {
     pendingAction = { type: 'export', format };
+    const curPos = appState[activeCategory] && appState[activeCategory][activePosIdx[activeCategory]];
+    const curPosName = (curPos && curPos.name && curPos.name.trim()) || '';
     const catNames = { railings: 'Лестничные ограждения', balconies: 'Балконные ограждения', showers: 'Душевые ограждения', loft: 'Лофт-перегородки' };
-    el('singleChoiceTitle').textContent = `Только ${catNames[activeCategory]}`;
+    el('singleChoiceTitle').textContent = `Только ${curPosName || catNames[activeCategory]}`;
     openModal('mergeChoiceModal');
   } else {
     exportKP(format, false);
@@ -1263,8 +1429,10 @@ function initiateShare() {
   const catCount = countConfiguredCategories();
   if (catCount > 1) {
     pendingAction = { type: 'share', format: 'pdf' };
+    const curPos = appState[activeCategory] && appState[activeCategory][activePosIdx[activeCategory]];
+    const curPosName = (curPos && curPos.name && curPos.name.trim()) || '';
     const catNames = { railings: 'Лестничные ограждения', balconies: 'Балконные ограждения', showers: 'Душевые ограждения', loft: 'Лофт-перегородки' };
-    el('singleChoiceTitle').textContent = `Только ${catNames[activeCategory]}`;
+    el('singleChoiceTitle').textContent = `Только ${curPosName || catNames[activeCategory]}`;
     openModal('mergeChoiceModal');
   } else {
     sharePDF(false);
@@ -1411,14 +1579,18 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
   if (el('kpDocItemTitle')) {
     if (isMerged && countConfiguredCategories() > 1) {
       el('kpDocItemTitle').textContent = 'Стеклянные конструкции (Комплексный заказ)';
+    } else if (activeList.length === 1) {
+      const singlePos = activeList[0];
+      const customTitle = (singlePos.pos && singlePos.pos.name && singlePos.pos.name.trim()) || getDefaultPositionName(singlePos.cat, singlePos.idx !== undefined ? singlePos.idx : 0);
+      el('kpDocItemTitle').textContent = customTitle;
     } else if (activeCategory === 'railings') {
-      el('kpDocItemTitle').textContent = 'Стеклянное ограждение лестницы';
+      el('kpDocItemTitle').textContent = 'Стеклянные ограждения лестниц';
     } else if (activeCategory === 'balconies') {
-      el('kpDocItemTitle').textContent = 'Стеклянное балконное ограждение';
+      el('kpDocItemTitle').textContent = 'Балконные ограждения';
     } else if (activeCategory === 'showers') {
-      el('kpDocItemTitle').textContent = 'Душевое ограждение из закалённого стекла';
+      el('kpDocItemTitle').textContent = 'Душевые ограждения из закалённого стекла';
     } else {
-      el('kpDocItemTitle').textContent = 'Межкомнатная стеклянная лофт-перегородка';
+      el('kpDocItemTitle').textContent = 'Межкомнатные стеклянные лофт-перегородки';
     }
   }
 
@@ -1465,9 +1637,10 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
   } else {
     activeList.forEach((cp, idx) => {
       subtotalItems += cp.posTotal;
+      const posTitle = (cp.pos && cp.pos.name && cp.pos.name.trim()) || getDefaultPositionName(cp.cat, cp.idx !== undefined ? cp.idx : idx);
 
       rowsHtml += `<tr class="kp-sec-hdr">
-        <td colspan="5">ПОЗИЦИЯ ${idx + 1}: ${cp.pos.name || `Изделие ${idx + 1}`}</td>
+        <td colspan="5">${posTitle.toUpperCase()}</td>
       </tr>`;
 
       rowsHtml += `<tr>
@@ -1497,7 +1670,7 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
       }
 
       rowsHtml += `<tr>
-        <td>Монтажные работы (${cp.pos.name || `Позиция ${idx + 1}`})</td>
+        <td>Монтажные работы (${posTitle})</td>
         <td class="c">компл.</td>
         <td class="c">1</td>
         <td class="r">${cp.isInstOn ? (cp.posInstSum > 0 ? rub(cp.posInstSum) : '0 ₽') : 'не требуются'}</td>
@@ -1960,6 +2133,7 @@ function addService() {
 
 function autoSave() {
   localStorage.setItem('glassloft_multi_calc_v6', JSON.stringify(D));
+  saveAppState();
 }
 
 function saveAll() {
@@ -1970,6 +2144,8 @@ function saveAll() {
 
 /* --- Init --- */
 function init() {
+  loadSavedConfig();
+  loadSavedAppState();
   renderCategoryContent();
   renderPositionTabs();
   buildServiceList();
