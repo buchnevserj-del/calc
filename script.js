@@ -136,18 +136,21 @@ let termManual = false;
 const PRESET_SECTION_NAMES = {
   balconies: [
     'Балконное ограждение',
+    'Балконное ограждение 1 этаж',
+    'Балконное ограждение 2 этаж',
     'Ограждение террасы',
     'Ограждение веранды',
-    'Ограждение балкона',
     'Ограждение второго света',
     'Французский балкон'
   ],
   railings: [
+    'Лестничное ограждение',
+    'Лестничное ограждение 1 этаж',
+    'Лестничное ограждение 2 этаж',
     'Стеклянное ограждение лестницы',
     'Ограждение лестничного марша',
     'Перила 2-й этаж',
-    'Ограждение атриума',
-    'Ограждение лестницы'
+    'Ограждение атриума'
   ],
   showers: [
     'Душевое ограждение',
@@ -168,12 +171,12 @@ const PRESET_SECTION_NAMES = {
 function getDefaultPositionName(cat, idx) {
   const num = (idx || 0) + 1;
   const defaults = {
-    railings: num === 1 ? 'Стеклянное ограждение лестницы' : `Лестничное ограждение ${num}`,
+    railings: num === 1 ? 'Лестничное ограждение' : `Лестничное ограждение ${num}`,
     balconies: num === 1 ? 'Балконное ограждение' : `Балконное ограждение ${num}`,
     showers: num === 1 ? 'Душевое ограждение' : `Душевое ограждение ${num}`,
     loft: num === 1 ? 'Лофт-перегородка' : `Лофт-перегородка ${num}`
   };
-  return defaults[cat] || `Позиция ${num}`;
+  return defaults[cat] || `Изделие ${num}`;
 }
 
 /* Multi-Product State with Per-Item Installation */
@@ -183,7 +186,7 @@ let appState = {
   railings: [
     {
       id: 1,
-      name: "Стеклянное ограждение лестницы",
+      name: "Лестничное ограждение",
       trapLen: "", rectLen: "", trapArea: "", rectArea: "",
       glass: "Классическое прозрачное (зеленоватая кромка), 10 мм",
       hardQty: {}, hardSum: {},
@@ -460,7 +463,7 @@ function renderPositionTabs() {
     return `
       <div class="sec-tab ${idx === activePosIdx[cat] ? 'active' : ''}" onclick="switchPosition(${idx})">
         <span>${catIcons[cat]} <span class="sec-tab-text">${esc(dName)}</span></span>
-        ${items.length > 1 ? `<span class="tab-del-btn" onclick="removePosition(${idx}, event)" title="Удалить позицию">✕</span>` : ''}
+        ${items.length > 1 ? `<span class="tab-del-btn" onclick="removePosition(${idx}, event)" title="Удалить">✕</span>` : ''}
       </div>
     `;
   }).join('');
@@ -545,7 +548,7 @@ function addPosition() {
   loadStateToInputs();
   calc();
   saveAppState();
-  showToast(`Добавлена позиция: «${defaultName}»!`);
+  showToast(`Добавлено: «${defaultName}»!`);
 }
 
 function removePosition(idx, event) {
@@ -561,7 +564,7 @@ function removePosition(idx, event) {
   loadStateToInputs();
   calc();
   saveAppState();
-  showToast('Позиция удалена');
+  showToast('Раздел удалён');
 }
 
 function onPositionNameChange() {
@@ -1376,15 +1379,16 @@ function calc() {
     t = 'Стоимость заказа будет следующей:\n\n';
     activeCalculated.forEach((cp, idx) => {
       const posTitle = (cp.pos && cp.pos.name && cp.pos.name.trim()) || getDefaultPositionName(cp.cat, cp.idx !== undefined ? cp.idx : idx);
-      t += `РАЗДЕЛ ${idx + 1}: ${posTitle}\n`;
+      t += `${idx + 1}. ${posTitle}:\n`;
       t += `  • Стекло закаленное ${cp.glassName} — ${rub(cp.glassSum)}\n`;
       t += `  • Комплект фурнитуры${cp.parts.length ? ` (${cp.parts.join(', ')})` : ''} — ${rub(cp.hardTotal)}\n`;
       if (cp.hasRail) {
         t += `  • Поручень: ${cp.railName} — ${rub(cp.railTotal)}\n`;
       }
       t += `  • Монтажные работы — ${cp.isInstOn ? (cp.posInstSum > 0 ? rub(cp.posInstSum) : '0 ₽') : 'не требуются'}\n`;
-      t += `  Итого за раздел — ${rub(cp.posTotal)}\n\n`;
+      t += `  Итого — ${rub(cp.posTotal)}\n\n`;
     });
+    counter = activeCalculated.length + 1;
   }
 
   t += `${counter++}. Доставка, разгрузка — ${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}\n`;
@@ -1640,7 +1644,7 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
       const posTitle = (cp.pos && cp.pos.name && cp.pos.name.trim()) || getDefaultPositionName(cp.cat, cp.idx !== undefined ? cp.idx : idx);
 
       rowsHtml += `<tr class="kp-sec-hdr">
-        <td colspan="5">${posTitle.toUpperCase()}</td>
+        <td colspan="5">${idx + 1}. ${posTitle.toUpperCase()}</td>
       </tr>`;
 
       rowsHtml += `<tr>
@@ -2463,7 +2467,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=1.4').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=1.5').then(reg => {
       reg.update();
     }).catch(() => {});
   }
