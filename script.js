@@ -1742,6 +1742,7 @@ function showToast(msg) {
 }
 
 function copyQuote() {
+  saveCurrentToHistory(false);
   const text = el('quoteText').textContent;
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text)
@@ -1753,6 +1754,7 @@ function copyQuote() {
 }
 
 async function sharePDF(isMerged) {
+  saveCurrentToHistory(false);
   showToast('Формирование PDF для отправки... ⏳');
   
   const seqNum = await fetchNextSequenceNumber();
@@ -1811,6 +1813,7 @@ async function sharePDF(isMerged) {
 }
 
 async function exportKP(format, isMerged) {
+  saveCurrentToHistory(false);
   showToast(`Формирование ${format.toUpperCase()}... ⏳`);
   
   const seqNum = await fetchNextSequenceNumber();
@@ -1878,8 +1881,293 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
+/* --- Calculations History System (Max 40 entries, Protected by PIN) --- */
+const MAX_HISTORY_ITEMS = 40;
+
+function getSavedHistory() {
+  try {
+    const saved = localStorage.getItem('glassloft_calc_history_v1');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch(e) {}
+  return [];
+}
+
+function saveHistoryList(list) {
+  try {
+    localStorage.setItem('glassloft_calc_history_v1', JSON.stringify(list.slice(0, MAX_HISTORY_ITEMS)));
+  } catch(e) {}
+  updateHistoryBadge();
+}
+
+function updateHistoryBadge() {
+  const badge = el('historyCountBadge');
+  const capBadge = el('historyCapacityBadge');
+  const history = getSavedHistory();
+  if (badge) badge.textContent = history.length;
+  if (capBadge) capBadge.textContent = `${history.length} / ${MAX_HISTORY_ITEMS} расчётов`;
+}
+
+function saveCurrentToHistory(isManual = false) {
+  syncCurrentInputsToState();
+  const clientVal = (el('calcClient') && el('calcClient').value.trim()) || 'Частное лицо';
+  const addressVal = (el('calcAddress') && el('calcAddress').value.trim()) || 'г. Санкт-Петербург';
+  
+  const resRailings = calculateCategoryData('railings');
+  const resBalconies = calculateCategoryData('balconies');
+  const resShowers = calculateCategoryData('showers');
+  const resLoft = calculateCategoryData('loft');
+  const allCategoriesTotal = resRailings.categoryTotal + resBalconies.categoryTotal + resShowers.categoryTotal + resLoft.categoryTotal;
+  const mult = getPriceMultiplier();
+  const rawDelSum = el('delOn')?.checked ? num('delPrice') : 0;
+  const delSum = roundUp500(rawDelSum * mult);
+  let servSum = 0;
+  document.querySelectorAll('.servPrice').forEach(inp => {
+    const v = inp.value.trim() === '' ? null : (parseFloat(inp.value) || 0);
+    if (v !== null && v > 0) servSum += roundUp500(v * mult);
+  });
+  const total = allCategoriesTotal + delSum + servSum;
+
+  if (total === 0 && !isManual) return;
+
+  const dates = getFormattedDates();
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const dateFormatted = `${dates.dateStr}, ${timeStr}`;
+  const seqNum = currentKpSeqNumber || 1;
+  const kpNumber = `№ ${seqNum}/${dates.noDots}`;
+
+  const productsSummary = [];
+  if (resRailings.categoryTotal > 0) {
+    appState.railings.forEach(p => { if (p.trapArea || p.rectArea || p.trapLen || p.rectLen) productsSummary.push(p.name || 'Лестничное ограждение'); });
+  }
+  if (resBalconies.categoryTotal > 0) {
+    appState.balconies.forEach(p => { if (p.length) productsSummary.push(p.name || 'Балконное ограждение'); });
+  }
+  if (resShowers.categoryTotal > 0) {
+    appState.showers.forEach(p => { if (p.fixedArea || p.doorArea) productsSummary.push(p.name || 'Душевое ограждение'); });
+  }
+  if (resLoft.categoryTotal > 0) {
+    appState.loft.forEach(p => { if (p.area || p.profileLen) productsSummary.push(p.name || 'Лофт-перегородка'); });
+  }
+  if (productsSummary.length === 0) {
+    const curPos = appState[activeCategory] && appState[activeCategory][activePosIdx[activeCategory]];
+    productsSummary.push(curPos?.name || getDefaultPositionName(activeCategory, 0));
+  }
+
+  const title = `${clientVal} — ${addressVal}`;
+  const history = getSavedHistory();
+
+  if (!isManual && history.length > 0) {
+    const top = history[0];
+    if (top.client === clientVal && top.address === addressVal && top.total === total && (Date.now() - top.timestamp < 15000)) {
+      return;
+    }
+  }
+
+  const newRecord = {
+    id: 'calc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    timestamp: Date.now(),
+    dateFormatted,
+    kpNumber,
+    client: clientVal,
+    address: addressVal,
+    title,
+    total,
+    totalFormatted: rub(total),
+    activeCategory,
+    productsSummary,
+    appState: JSON.parse(JSON.stringify(appState)),
+    extraData: {
+      delOn: el('delOn') ? el('delOn').checked : true,
+      delPrice: el('delPrice') ? el('delPrice').value : 7500,
+      adjMode: adjMode,
+      adjPercent: el('adjPercent') ? el('adjPercent').value : '',
+      termManual: termManual,
+      termDays: el('termDays') ? el('termDays').value : '',
+      services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
+    }
+  };
+
+  history.unshift(newRecord);
+  saveHistoryList(history);
+
+  if (isManual) {
+    renderHistoryList();
+    showToast(`Расчёт «${title}» сохранён в историю! 💾`);
+  }
+}
+
+function renderHistoryList() {
+  const container = el('historyListContainer');
+  if (!container) return;
+
+  const searchVal = (el('historySearchInput') && el('historySearchInput').value.trim().toLowerCase()) || '';
+  const history = getSavedHistory();
+  updateHistoryBadge();
+
+  if (history.length === 0) {
+    container.innerHTML = `
+      <div class="history-empty-state">
+        <div class="history-empty-icon">📁</div>
+        <div class="history-empty-title">История расчётов пуста</div>
+        <div class="history-empty-desc">Здесь будут автоматически сохраняться последние 40 коммерческих предложений с именами клиентов, адресами и суммами.</div>
+      </div>
+    `;
+    return;
+  }
+
+  const filtered = history.filter(item => {
+    if (!searchVal) return true;
+    const q = searchVal;
+    return (item.title && item.title.toLowerCase().includes(q)) ||
+           (item.client && item.client.toLowerCase().includes(q)) ||
+           (item.address && item.address.toLowerCase().includes(q)) ||
+           (item.kpNumber && item.kpNumber.toLowerCase().includes(q)) ||
+           (item.dateFormatted && item.dateFormatted.toLowerCase().includes(q)) ||
+           (item.totalFormatted && item.totalFormatted.toLowerCase().includes(q));
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="history-empty-state">
+        <div class="history-empty-icon">🔍</div>
+        <div class="history-empty-title">Ничего не найдено</div>
+        <div class="history-empty-desc">По запросу «${esc(searchVal)}» нет сохранённых расчётов.</div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(item => {
+    const tagsHtml = (item.productsSummary || []).map(tag => `<span class="history-tag">${esc(tag)}</span>`).join('');
+    return `
+      <div class="history-card">
+        <div class="history-card-top">
+          <div class="history-card-title-wrap">
+            <div class="history-calc-title">${esc(item.title || `${item.client} — ${item.address}`)}</div>
+            <div class="history-calc-meta">
+              <span class="history-meta-date">📅 ${esc(item.dateFormatted || '')}</span>
+              <span class="history-meta-doc">📄 ${esc(item.kpNumber || '')}</span>
+            </div>
+          </div>
+          <div class="history-calc-sum">${esc(item.totalFormatted || rub(item.total || 0))}</div>
+        </div>
+
+        ${tagsHtml ? `<div class="history-card-tags">${tagsHtml}</div>` : ''}
+
+        <div class="history-card-actions">
+          <button type="button" class="btn b-primary btn-sm" onclick="loadCalculationFromHistory('${item.id}')" title="Загрузить все параметры расчёта в калькулятор">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-4M17 9l-5 5-5-5M12 12.8V2.5"></path></svg>
+            <span>Загрузить расчёт</span>
+          </button>
+          <button type="button" class="btn ghost btn-sm" onclick="copyHistoryQuote('${item.id}')" title="Скопировать смету в буфер обмена">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Смета</span>
+          </button>
+          <button type="button" class="btn-del-hist" onclick="deleteHistoryItem('${item.id}', event)" title="Удалить этот расчёт из истории">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function loadCalculationFromHistory(id) {
+  const history = getSavedHistory();
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+
+  if (item.appState) {
+    appState = JSON.parse(JSON.stringify(item.appState));
+  }
+  
+  if (el('calcClient')) el('calcClient').value = item.client || 'Частное лицо';
+  if (el('calcAddress')) el('calcAddress').value = item.address || 'г. Санкт-Петербург';
+
+  if (item.extraData) {
+    if (el('delOn') && item.extraData.delOn !== undefined) el('delOn').checked = item.extraData.delOn;
+    if (el('delPrice') && item.extraData.delPrice !== undefined) el('delPrice').value = item.extraData.delPrice;
+    if (item.extraData.adjMode) setAdjMode(item.extraData.adjMode);
+    if (el('adjPercent') && item.extraData.adjPercent !== undefined) el('adjPercent').value = item.extraData.adjPercent;
+    if (item.extraData.termManual !== undefined) termManual = item.extraData.termManual;
+    if (el('termDays') && item.extraData.termDays) el('termDays').value = item.extraData.termDays;
+    
+    if (Array.isArray(item.extraData.services)) {
+      item.extraData.services.forEach(s => {
+        const inp = document.querySelector(`.servPrice[data-idx="${s.idx}"]`);
+        if (inp) inp.value = s.val || '';
+      });
+    }
+  }
+
+  if (item.activeCategory && ['railings', 'balconies', 'showers', 'loft'].includes(item.activeCategory)) {
+    activeCategory = item.activeCategory;
+  }
+  activePosIdx = { railings: 0, balconies: 0, showers: 0, loft: 0 };
+
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  if (activeCategory === 'railings' && el('tabCatRailings')) el('tabCatRailings').classList.add('active');
+  if (activeCategory === 'balconies' && el('tabCatBalconies')) el('tabCatBalconies').classList.add('active');
+  if (activeCategory === 'showers' && el('tabCatShowers')) el('tabCatShowers').classList.add('active');
+  if (activeCategory === 'loft' && el('tabCatLoft')) el('tabCatLoft').classList.add('active');
+
+  renderCategoryContent();
+  renderPositionTabs();
+  loadStateToInputs();
+  calc();
+  saveAppState();
+
+  closeModal('historyModal');
+  showToast(`Расчёт «${item.title || item.client}» загружен! 🚀`);
+}
+
+function deleteHistoryItem(id, event) {
+  if (event) event.stopPropagation();
+  let history = getSavedHistory();
+  history = history.filter(h => h.id !== id);
+  saveHistoryList(history);
+  renderHistoryList();
+  showToast('Расчёт удалён из истории');
+}
+
+function clearAllHistory() {
+  const history = getSavedHistory();
+  if (history.length === 0) return;
+  if (confirm('Вы действительно хотите полностью очистить историю всех расчётов?')) {
+    saveHistoryList([]);
+    renderHistoryList();
+    showToast('История расчётов очищена');
+  }
+}
+
+function copyHistoryQuote(id) {
+  const history = getSavedHistory();
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+  
+  let t = `Коммерческое предложение:\n«${item.title || item.client}»\n\n`;
+  t += `Заказчик: ${item.client || 'Частное лицо'}\n`;
+  t += `Адрес: ${item.address || 'г. Санкт-Петербург'}\n`;
+  t += `Дата: ${item.dateFormatted || ''}\n`;
+  t += `Номер документа: ${item.kpNumber || ''}\n`;
+  if (item.productsSummary && item.productsSummary.length) {
+    t += `Состав: ${item.productsSummary.join(', ')}\n`;
+  }
+  t += `\nИтоговая стоимость: ${item.totalFormatted || rub(item.total || 0)}\n`;
+  
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(t).then(() => showToast('Текст сметы скопирован! 📋')).catch(() => fallbackCopy(t));
+  } else {
+    fallbackCopy(t);
+  }
+}
+
 /* --- Settings Modals & Admin Security --- */
-const SETTINGS_MODALS = ['glassModal', 'hardModal', 'railModal', 'deliveryModal', 'installModal', 'serviceModal', 'termModal'];
+const SETTINGS_MODALS = ['glassModal', 'hardModal', 'railModal', 'deliveryModal', 'installModal', 'serviceModal', 'termModal', 'historyModal'];
 
 function openModal(id) {
   if (SETTINGS_MODALS.includes(id) && !isAdminUnlocked) {
@@ -2139,7 +2427,8 @@ function autoSave() {
 function saveAll() {
   syncCurrentInputsToState();
   autoSave();
-  showToast('Все настройки и прайс-листы сохранены! 💾');
+  saveCurrentToHistory(false);
+  showToast('Все настройки и расчёт сохранены! 💾');
 }
 
 async function forceAppUpdate() {
@@ -2168,12 +2457,13 @@ function init() {
   renderCategoryContent();
   renderPositionTabs();
   buildServiceList();
+  updateHistoryBadge();
   if (el('delPrice')) el('delPrice').value = D.misc.delivery;
   calc();
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=1.3').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=1.4').then(reg => {
       reg.update();
     }).catch(() => {});
   }

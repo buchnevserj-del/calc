@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1.3">
+<link rel="stylesheet" href="style.css?v=1.4">
 </head>
 <body>
 <div class="wrap">
@@ -25,6 +25,11 @@
       <img src="logo.png" alt="GLASS LOFT — Стеклянные конструкции под ключ" class="brand-logo-img">
     </div>
     <div class="header-actions">
+      <button class="btn b-history" onclick="openModal('historyModal')" title="История последних 40 расчётов (защищено PIN-кодом)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>История</span>
+        <span class="history-count-badge" id="historyCountBadge">0</span>
+      </button>
       <button class="btn ghost" onclick="forceAppUpdate()" title="Сбросить кэш и принудительно обновить приложение">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         <span>Обновить</span>
@@ -411,6 +416,43 @@
   </div>
 </div></div>
 
+<!-- History Modal (PIN Protected, 30-40 calculations) -->
+<div class="modal" id="historyModal"><div class="mbox history-mbox">
+  <span class="close" onclick="closeModal('historyModal')">&times;</span>
+  <div class="history-modal-header">
+    <div class="history-modal-title-group">
+      <h3>📋 История расчётов</h3>
+      <span class="history-capacity-badge" id="historyCapacityBadge">0 / 40 расчётов</span>
+    </div>
+    <div class="history-header-actions">
+      <button type="button" class="btn ghost btn-sm" onclick="saveCurrentToHistory(true)" title="Сохранить текущий расчёт в историю">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        <span>Записать текущий</span>
+      </button>
+      <button type="button" class="btn ghost btn-sm text-danger" onclick="clearAllHistory()" title="Очистить всю историю расчётов">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        <span>Очистить</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Search / Filter Input -->
+  <div class="history-search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <input type="text" id="historySearchInput" placeholder="Поиск по имени заказчика, адресу объекта или сумме..." oninput="renderHistoryList()">
+  </div>
+
+  <!-- History List Container -->
+  <div class="history-list-container" id="historyListContainer">
+    <!-- Rendered via JS -->
+  </div>
+
+  <div class="admin-modal-footer">
+    <button class="admin-link-btn" onclick="openChangePinModal()">🔑 Сменить PIN</button>
+    <button class="admin-link-btn" onclick="lockAdmin()">🔒 Заблокировать</button>
+  </div>
+</div></div>
+
 <!-- Hidden Exact A4 Commercial Proposal Template for High-Res Export -->
 <div id="kpRenderContainer">
   <div class="a4-page" id="kpExportPage">
@@ -530,6 +572,6 @@
 
 <script src="html2canvas.min.js"></script>
 <script src="jspdf.umd.min.js"></script>
-<script src="script.js?v=1.3"></script>
+<script src="script.js?v=1.4"></script>
 </body>
 </html>
