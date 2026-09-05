@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1.5">
+<link rel="stylesheet" href="style.css?v=1.6">
 </head>
 <body>
 <div class="wrap">
@@ -67,6 +67,23 @@
     <!-- Left Column: Dynamic Step-by-Step Builder Form -->
     <div class="builder-col">
       
+      <!-- Active Edit Mode Banner -->
+      <div class="edit-mode-banner" id="editModeBanner" style="display:none;">
+        <div class="edit-mode-info">
+          <span class="edit-mode-badge">✏️ Редактирование</span>
+          <span class="edit-mode-title" id="editModeTitle"></span>
+        </div>
+        <div class="edit-mode-actions">
+          <button type="button" class="btn b-primary btn-sm" onclick="saveActiveEditing()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            <span>Сохранить</span>
+          </button>
+          <button type="button" class="btn ghost btn-sm" onclick="cancelActiveEditing()">
+            <span>Отмена</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Multi-Position Sub-Tabs for Current Category -->
       <div class="sections-bar-wrap">
         <div class="sections-tabs" id="positionTabs"></div>
@@ -453,6 +470,30 @@
   </div>
 </div></div>
 
+<!-- Edit Choice Modal (Modify existing vs Clone with new number) -->
+<div class="modal" id="editChoiceModal"><div class="mbox edit-choice-box">
+  <span class="close" onclick="closeModal('editChoiceModal')">&times;</span>
+  <h3 id="editChoiceModalTitle">Редактирование расчёта</h3>
+  <div id="editChoiceModalSubtitle" style="margin-top:-10px;margin-bottom:14px;font-size:13px;font-weight:600;color:var(--text-muted);"></div>
+  
+  <div class="edit-choice-options">
+    <button type="button" class="edit-choice-btn" onclick="executeEditChoice('update')">
+      <div class="edit-choice-icon">✏️</div>
+      <div class="edit-choice-content">
+        <h4>1. Внести изменения в этот расчёт</h4>
+        <p>Загрузит данные в калькулятор и обновит существующую запись в истории с сохранением исходного номера КП.</p>
+      </div>
+    </button>
+    <button type="button" class="edit-choice-btn" onclick="executeEditChoice('clone')">
+      <div class="edit-choice-icon">📋</div>
+      <div class="edit-choice-content">
+        <h4>2. Создать копию с новым номером КП</h4>
+        <p>Создаст новое независимое КП для этого же заказчика со следующим порядковым номером для внесения правок.</p>
+      </div>
+    </button>
+  </div>
+</div></div>
+
 <!-- Hidden Exact A4 Commercial Proposal Template for High-Res Export -->
 <div id="kpRenderContainer">
   <div class="a4-page" id="kpExportPage">
@@ -572,6 +613,6 @@
 
 <script src="html2canvas.min.js"></script>
 <script src="jspdf.umd.min.js"></script>
-<script src="script.js?v=1.5"></script>
+<script src="script.js?v=1.6"></script>
 </body>
 </html>

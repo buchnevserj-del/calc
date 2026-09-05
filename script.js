@@ -1887,6 +1887,8 @@ function fallbackCopy(text) {
 
 /* --- Calculations History System (Max 40 entries, Protected by PIN) --- */
 const MAX_HISTORY_ITEMS = 40;
+let activeEditingHistoryId = null;
+let pendingEditChoiceId = null;
 
 function getSavedHistory() {
   try {
@@ -1964,6 +1966,39 @@ function saveCurrentToHistory(isManual = false) {
   const title = `${clientVal} — ${addressVal}`;
   const history = getSavedHistory();
 
+  // If in active edit mode: update existing record in place
+  if (activeEditingHistoryId) {
+    const existingIdx = history.findIndex(h => h.id === activeEditingHistoryId);
+    if (existingIdx !== -1) {
+      const existing = history[existingIdx];
+      existing.client = clientVal;
+      existing.address = addressVal;
+      existing.title = title;
+      existing.total = total;
+      existing.totalFormatted = rub(total);
+      existing.dateFormatted = `${dateFormatted} (изм.)`;
+      existing.activeCategory = activeCategory;
+      existing.productsSummary = productsSummary;
+      existing.appState = JSON.parse(JSON.stringify(appState));
+      existing.extraData = {
+        delOn: el('delOn') ? el('delOn').checked : true,
+        delPrice: el('delPrice') ? el('delPrice').value : 7500,
+        adjMode: adjMode,
+        adjPercent: el('adjPercent') ? el('adjPercent').value : '',
+        termManual: termManual,
+        termDays: el('termDays') ? el('termDays').value : '',
+        services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
+      };
+      saveHistoryList(history);
+      if (isManual) {
+        renderHistoryList();
+        showToast(`Расчёт «${title}» обновлён! 💾`);
+      }
+      return;
+    }
+  }
+
+  // Avoid duplicate rapid saves within 15 seconds
   if (!isManual && history.length > 0) {
     const top = history[0];
     if (top.client === clientVal && top.address === addressVal && top.total === total && (Date.now() - top.timestamp < 15000)) {
@@ -1975,6 +2010,7 @@ function saveCurrentToHistory(isManual = false) {
     id: 'calc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     timestamp: Date.now(),
     dateFormatted,
+    seqNum,
     kpNumber,
     client: clientVal,
     address: addressVal,
@@ -2031,7 +2067,8 @@ function renderHistoryList() {
            (item.address && item.address.toLowerCase().includes(q)) ||
            (item.kpNumber && item.kpNumber.toLowerCase().includes(q)) ||
            (item.dateFormatted && item.dateFormatted.toLowerCase().includes(q)) ||
-           (item.totalFormatted && item.totalFormatted.toLowerCase().includes(q));
+           (item.totalFormatted && item.totalFormatted.toLowerCase().includes(q)) ||
+           (item.productsSummary && item.productsSummary.some(p => p.toLowerCase().includes(q)));
   });
 
   if (filtered.length === 0) {
@@ -2063,12 +2100,15 @@ function renderHistoryList() {
         ${tagsHtml ? `<div class="history-card-tags">${tagsHtml}</div>` : ''}
 
         <div class="history-card-actions">
-          <button type="button" class="btn b-primary btn-sm" onclick="loadCalculationFromHistory('${item.id}')" title="Загрузить все параметры расчёта в калькулятор">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-4M17 9l-5 5-5-5M12 12.8V2.5"></path></svg>
-            <span>Загрузить расчёт</span>
+          <button type="button" class="btn b-primary btn-sm" onclick="openEditCalculationModal('${item.id}')" title="Выбрать: изменить этот расчёт или создать копию">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <span>Редактировать</span>
+          </button>
+          <button type="button" class="btn ghost btn-sm" onclick="duplicateCalculationFromHistory('${item.id}'); closeModal('historyModal');" title="Создать копию с новым порядковым номером КП">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Копия (Новый №)</span>
           </button>
           <button type="button" class="btn ghost btn-sm" onclick="copyHistoryQuote('${item.id}')" title="Скопировать смету в буфер обмена">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             <span>Смета</span>
           </button>
           <button type="button" class="btn-del-hist" onclick="deleteHistoryItem('${item.id}', event)" title="Удалить этот расчёт из истории">
@@ -2080,11 +2120,69 @@ function renderHistoryList() {
   }).join('');
 }
 
-function loadCalculationFromHistory(id) {
+function openEditCalculationModal(id) {
   const history = getSavedHistory();
   const item = history.find(h => h.id === id);
   if (!item) return;
 
+  pendingEditChoiceId = id;
+  if (el('editChoiceModalTitle')) el('editChoiceModalTitle').textContent = `Редактирование: ${item.client || 'Заказчик'}`;
+  if (el('editChoiceModalSubtitle')) el('editChoiceModalSubtitle').textContent = `${item.address || ''} · ${item.kpNumber || ''} · ${item.totalFormatted || ''}`;
+
+  closeModal('historyModal');
+  const modal = el('editChoiceModal');
+  if (modal) modal.classList.add('open');
+}
+
+function executeEditChoice(mode) {
+  const id = pendingEditChoiceId;
+  closeModal('editChoiceModal');
+  if (!id) return;
+
+  if (mode === 'update') {
+    startEditingHistoryItem(id);
+  } else if (mode === 'clone') {
+    duplicateCalculationFromHistory(id);
+  }
+  pendingEditChoiceId = null;
+}
+
+function startEditingHistoryItem(id) {
+  const history = getSavedHistory();
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+
+  activeEditingHistoryId = id;
+
+  restoreCalculationData(item);
+
+  const banner = el('editModeBanner');
+  const bannerTitle = el('editModeTitle');
+  if (banner) banner.style.display = 'flex';
+  if (bannerTitle) bannerTitle.textContent = `${item.title || item.client} (${item.kpNumber || ''})`;
+
+  showToast(`Режим редактирования расчёта ${item.kpNumber || ''} ✏️`);
+}
+
+async function duplicateCalculationFromHistory(id) {
+  const history = getSavedHistory();
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+
+  activeEditingHistoryId = null;
+  const banner = el('editModeBanner');
+  if (banner) banner.style.display = 'none';
+
+  restoreCalculationData(item);
+
+  const nextSeq = await fetchNextSequenceNumber();
+  updateKpDocumentData(nextSeq, false);
+
+  const dates = getFormattedDates();
+  showToast(`Создана копия с новым номером КП №${nextSeq}/${dates.noDots}! 📋`);
+}
+
+function restoreCalculationData(item) {
   if (item.appState) {
     appState = JSON.parse(JSON.stringify(item.appState));
   }
@@ -2124,9 +2222,63 @@ function loadCalculationFromHistory(id) {
   loadStateToInputs();
   calc();
   saveAppState();
+}
 
-  closeModal('historyModal');
-  showToast(`Расчёт «${item.title || item.client}» загружен! 🚀`);
+function saveActiveEditing() {
+  if (!activeEditingHistoryId) return;
+  saveCurrentToHistory(false);
+  const banner = el('editModeBanner');
+  if (banner) banner.style.display = 'none';
+  activeEditingHistoryId = null;
+  showToast('Изменения в расчёте успешно сохранены! 💾');
+}
+
+function cancelActiveEditing() {
+  activeEditingHistoryId = null;
+  const banner = el('editModeBanner');
+  if (banner) banner.style.display = 'none';
+  showToast('Режим редактирования завершён');
+}
+
+function deleteHistoryItem(id, event) {
+  if (event) event.stopPropagation();
+  let history = getSavedHistory();
+  history = history.filter(h => h.id !== id);
+  saveHistoryList(history);
+  renderHistoryList();
+  showToast('Расчёт удалён из истории');
+}
+
+function clearAllHistory() {
+  const history = getSavedHistory();
+  if (history.length === 0) return;
+  if (confirm('Вы действительно хотите полностью очистить историю всех расчётов?')) {
+    saveHistoryList([]);
+    renderHistoryList();
+    showToast('История расчётов очищена');
+  }
+}
+
+function copyHistoryQuote(id) {
+  const history = getSavedHistory();
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+  
+  let t = `Коммерческое предложение:\n«${item.title || item.client}»\n\n`;
+  t += `Заказчик: ${item.client || 'Частное лицо'}\n`;
+  t += `Адрес: ${item.address || 'г. Санкт-Петербург'}\n`;
+  t += `Дата: ${item.dateFormatted || ''}\n`;
+  t += `Номер документа: ${item.kpNumber || ''}\n`;
+  if (item.productsSummary && item.productsSummary.length) {
+    t += `Состав: ${item.productsSummary.join(', ')}\n`;
+  }
+  t += `\nИтоговая стоимость: ${item.totalFormatted || rub(item.total || 0)}\n`;
+  
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(t).then(() => showToast('Текст сметы скопирован! 📋')).catch(() => fallbackCopy(t));
+  } else {
+    fallbackCopy(t);
+  }
 }
 
 function deleteHistoryItem(id, event) {
@@ -2467,7 +2619,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=1.5').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=1.6').then(reg => {
       reg.update();
     }).catch(() => {});
   }
