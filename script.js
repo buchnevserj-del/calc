@@ -1910,10 +1910,87 @@ function saveHistoryList(list) {
 
 function updateHistoryBadge() {
   const badge = el('historyCountBadge');
+  const badgeRight = el('historyCountBadgeRight');
+  const badgeFloat = el('historyCountBadgeFloat');
   const capBadge = el('historyCapacityBadge');
   const history = getSavedHistory();
   if (badge) badge.textContent = history.length;
+  if (badgeRight) badgeRight.textContent = history.length;
+  if (badgeFloat) badgeFloat.textContent = history.length;
   if (capBadge) capBadge.textContent = `${history.length} / ${MAX_HISTORY_ITEMS} расчётов`;
+}
+
+function seedInitialHistoryIfEmpty() {
+  let history = getSavedHistory();
+  if (history.length === 0) {
+    const dates = getFormattedDates();
+    const demoItems = [
+      {
+        id: 'calc_init_1',
+        timestamp: Date.now() - 3600000 * 2,
+        dateFormatted: `${dates.dateStr}, 11:20`,
+        seqNum: 8,
+        kpNumber: `№ 8/${dates.noDots}`,
+        client: 'Алексей Смирнов',
+        address: 'г. Санкт-Петербург, Московский пр. 120',
+        title: 'Алексей Смирнов — г. Санкт-Петербург, Московский пр. 120',
+        total: 165000,
+        totalFormatted: '165 000 ₽',
+        activeCategory: 'balconies',
+        productsSummary: ['Балконное ограждение 1 этаж (14 м.пог.)'],
+        appState: {
+          railings: [{ id: 1, name: 'Лестничное ограждение', trapLen: '', rectLen: '', trapArea: '', rectArea: '', glass: 'Классическое прозрачное (зеленоватая кромка), 10 мм', hardQty: {}, hardSum: {}, railSelect: 'Без поручня', railLength: '', railManual: '', instOn: true, instMode: 'fix', instFix: 35000, instPct: 30 }],
+          balconies: [{ id: 1, name: 'Балконное ограждение 1 этаж', length: '14', heightMm: '1000', glass: 'Классическое прозрачное (зеленоватая кромка), 10 мм', hardQty: {}, hardSum: {}, railSelect: 'Без поручня', railLength: '', railManual: '', instOn: true, instMode: 'fix', instFix: 35000, instPct: 30 }],
+          showers: [{ id: 1, name: 'Душевое ограждение', fixedArea: '', doorArea: '', glass: 'Классическое прозрачное (закаленное), 8 мм', hardQty: {}, hardSum: {}, instOn: true, instMode: 'fix', instFix: 15000, instPct: 30 }],
+          loft: [{ id: 1, name: 'Лофт-перегородка', area: '', profileLen: '', gridLen: '', glass: 'Классическое прозрачное (закаленное), 6 мм', hardQty: {}, hardSum: {}, instOn: true, instMode: 'fix', instFix: 25000, instPct: 30 }]
+        },
+        extraData: { delOn: true, delPrice: 7500, adjMode: 'none', adjPercent: '', termManual: false, termDays: '21', services: [] }
+      },
+      {
+        id: 'calc_init_2',
+        timestamp: Date.now() - 3600000 * 24,
+        dateFormatted: `01.09.2026, 16:45`,
+        seqNum: 7,
+        kpNumber: `№ 7/010926`,
+        client: 'Екатерина Васильева',
+        address: 'Ленинградская обл., КП Солнечное',
+        title: 'Екатерина Васильева — Ленинградская обл., КП Солнечное',
+        total: 340000,
+        totalFormatted: '340 000 ₽',
+        activeCategory: 'railings',
+        productsSummary: ['Лестничное ограждение', 'Ограждение террасы'],
+        appState: {
+          railings: [{ id: 1, name: 'Лестничное ограждение', trapLen: '8', rectLen: '6', trapArea: '13.5', rectArea: '7.5', glass: 'Триплекс 5+5 мм, классическое прозрачное', hardQty: { '0': '24' }, hardSum: {}, railSelect: 'Деревянный поручень 40×40, масло с воском', railLength: '14', railManual: '', instOn: true, instMode: 'fix', instFix: 45000, instPct: 30 }],
+          balconies: [{ id: 1, name: 'Ограждение террасы', length: '12', heightMm: '1100', glass: 'Триплекс 5+5 мм, классическое прозрачное', hardQty: { '0': '12' }, hardSum: {}, railSelect: 'Без поручня', railLength: '', railManual: '', instOn: true, instMode: 'fix', instFix: 35000, instPct: 30 }],
+          showers: [{ id: 1, name: 'Душевое ограждение', fixedArea: '', doorArea: '', glass: 'Классическое прозрачное (закаленное), 8 мм', hardQty: {}, hardSum: {}, instOn: true, instMode: 'fix', instFix: 15000, instPct: 30 }],
+          loft: [{ id: 1, name: 'Лофт-перегородка', area: '', profileLen: '', gridLen: '', glass: 'Классическое прозрачное (закаленное), 6 мм', hardQty: {}, hardSum: {}, instOn: true, instMode: 'fix', instFix: 25000, instPct: 30 }]
+        },
+        extraData: { delOn: true, delPrice: 7500, adjMode: 'none', adjPercent: '', termManual: false, termDays: '25', services: [] }
+      },
+      {
+        id: 'calc_init_3',
+        timestamp: Date.now() - 3600000 * 48,
+        dateFormatted: `30.08.2026, 14:10`,
+        seqNum: 6,
+        kpNumber: `№ 6/300826`,
+        client: 'Дмитрий Орлов',
+        address: 'г. Санкт-Петербург, Каменноостровский пр. 32',
+        title: 'Дмитрий Орлов — г. Санкт-Петербург, Каменноостровский пр. 32',
+        total: 78500,
+        totalFormatted: '78 500 ₽',
+        activeCategory: 'showers',
+        productsSummary: ['Душевое ограждение (4.5 м²)'],
+        appState: {
+          railings: [{ id: 1, name: 'Лестничное ограждение', trapLen: '', rectLen: '', trapArea: '', rectArea: '', glass: 'Классическое прозрачное (зеленоватая кромка), 10 мм', hardQty: {}, hardSum: {}, railSelect: 'Без поручня', railLength: '', railManual: '', instOn: true, instMode: 'fix', instFix: 35000, instPct: 30 }],
+          balconies: [{ id: 1, name: 'Балконное ограждение', length: '', heightMm: '1000', glass: 'Классическое прозрачное (зеленоватая кромка), 10 мм', hardQty: {}, hardSum: {}, railSelect: 'Без поручня', railLength: '', railManual: '', instOn: true, instMode: 'fix', instFix: 35000, instPct: 30 }],
+          showers: [{ id: 1, name: 'Душевое ограждение', fixedArea: '2.5', doorArea: '1.8', glass: 'Осветлённое Crystal Vision (без оттенка), 8 мм', hardQty: { '0': '2', '2': '4', '4': '1' }, hardSum: {}, instOn: true, instMode: 'fix', instFix: 15000, instPct: 30 }],
+          loft: [{ id: 1, name: 'Лофт-перегородка', area: '', profileLen: '', gridLen: '', glass: 'Классическое прозрачное (закаленное), 6 мм', hardQty: {}, hardSum: {}, instOn: true, instMode: 'fix', instFix: 25000, instPct: 30 }]
+        },
+        extraData: { delOn: true, delPrice: 7500, adjMode: 'none', adjPercent: '', termManual: false, termDays: '21', services: [] }
+      }
+    ];
+    saveHistoryList(demoItems);
+  }
 }
 
 function saveCurrentToHistory(isManual = false) {
@@ -2610,6 +2687,7 @@ async function forceAppUpdate() {
 function init() {
   loadSavedConfig();
   loadSavedAppState();
+  seedInitialHistoryIfEmpty();
   renderCategoryContent();
   renderPositionTabs();
   buildServiceList();
@@ -2619,7 +2697,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=1.6').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=1.7').then(reg => {
       reg.update();
     }).catch(() => {});
   }

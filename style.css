@@ -1027,6 +1027,46 @@ input:checked + .slider:before {
   background: var(--primary);
 }
 
+.b-history-card {
+  width: 100%;
+  height: 44px;
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1.5px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  font: 700 13.5px 'Plus Jakarta Sans', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.b-history-card:hover {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-color: var(--primary-border);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15);
+}
+
+.btn-float-history {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: #ffffff;
+  color: #0f172a;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.btn-float-history:hover {
+  background: #f1f5f9;
+}
+
 /* Active Edit Mode Banner */
 .edit-mode-banner {
   background: #fef3c7;

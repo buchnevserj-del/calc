@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1.6">
+<link rel="stylesheet" href="style.css?v=1.7">
 </head>
 <body>
 <div class="wrap">
@@ -229,6 +229,13 @@
           </button>
         </div>
 
+        <!-- History Quick Access Button -->
+        <button type="button" class="btn b-history-card" onclick="openModal('historyModal')" title="Открыть историю последних расчётов (PIN: 0120)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>📋 История последних расчётов</span>
+          <span class="history-count-badge" id="historyCountBadgeRight">0</span>
+        </button>
+
         <!-- Action Buttons: Share & Copy -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
           <button class="btn b-share" style="height:44px;" onclick="initiateShare()">
@@ -256,9 +263,14 @@
     <span class="floating-sum" id="floatingSum">0 ₽</span>
   </div>
   <div class="floating-actions">
+    <button class="btn btn-float-history" onclick="openModal('historyModal')" title="История расчётов">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      <span>История</span>
+      <span class="history-count-badge" id="historyCountBadgeFloat">0</span>
+    </button>
     <button class="btn btn-float-share" onclick="initiateShare()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-      Поделиться PDF
+      Поделиться
     </button>
     <button class="btn btn-float-copy" onclick="copyQuote()" title="Скопировать текст">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -289,8 +301,8 @@
   <div style="width:54px;height:54px;border-radius:18px;background:#f0f9ff;color:#0284c7;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
   </div>
-  <h3 style="margin-bottom:6px;">Вход в настройки</h3>
-  <div class="hint" style="margin-bottom:16px;">Введите PIN-код администратора для изменения прайс-листа:</div>
+  <h3 style="margin-bottom:6px;">Вход в закрытый раздел</h3>
+  <div class="hint" style="margin-bottom:16px;">Введите PIN-код для доступа к истории и настройкам (по умолчанию: <b>0120</b>):</div>
   
   <div style="margin-bottom:14px;">
     <input type="password" id="pinInput" placeholder="PIN-код" maxlength="16" style="text-align:center;font-size:20px;letter-spacing:0.2em;height:50px;" onkeydown="if(event.key==='Enter') verifyPin();">
@@ -613,6 +625,6 @@
 
 <script src="html2canvas.min.js"></script>
 <script src="jspdf.umd.min.js"></script>
-<script src="script.js?v=1.6"></script>
+<script src="script.js?v=1.7"></script>
 </body>
 </html>
