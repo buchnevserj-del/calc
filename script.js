@@ -2415,6 +2415,7 @@ function openModal(id) {
     return;
   }
   renderSettingsFor(id);
+  if (id === 'historyModal') renderHistoryList();
   const target = el(id);
   if (target) target.classList.add('open');
 }
@@ -2488,6 +2489,7 @@ function saveNewPin() {
 }
 
 function renderSettingsFor(id) {
+  if (id === 'historyModal') renderHistoryList();
   if (id === 'glassModal') renderGlassSettings();
   if (id === 'hardModal') renderHardSettings();
   if (id === 'railModal') renderRailSettings();
@@ -2692,12 +2694,13 @@ function init() {
   renderPositionTabs();
   buildServiceList();
   updateHistoryBadge();
+  renderHistoryList();
   if (el('delPrice')) el('delPrice').value = D.misc.delivery;
   calc();
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=1.7').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=1.8').then(reg => {
       reg.update();
     }).catch(() => {});
   }
