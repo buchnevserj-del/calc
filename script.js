@@ -2117,6 +2117,14 @@ function saveCurrentToHistory(isManual = false) {
   }
 }
 
+let expandedHistoryId = null;
+
+function toggleHistoryItem(id, event) {
+  if (event && (event.target.closest('button') || event.target.closest('.btn-del-hist'))) return;
+  expandedHistoryId = (expandedHistoryId === id) ? null : id;
+  renderHistoryList();
+}
+
 function renderHistoryList() {
   const container = el('historyListContainer');
   if (!container) return;
@@ -2160,37 +2168,51 @@ function renderHistoryList() {
   }
 
   container.innerHTML = filtered.map(item => {
+    const isExpanded = expandedHistoryId === item.id;
     const tagsHtml = (item.productsSummary || []).map(tag => `<span class="history-tag">${esc(tag)}</span>`).join('');
+
     return `
-      <div class="history-card">
-        <div class="history-card-top">
-          <div class="history-card-title-wrap">
-            <div class="history-calc-title">${esc(item.title || `${item.client} — ${item.address}`)}</div>
-            <div class="history-calc-meta">
-              <span class="history-meta-date">📅 ${esc(item.dateFormatted || '')}</span>
-              <span class="history-meta-doc">📄 ${esc(item.kpNumber || '')}</span>
+      <div class="history-item-row ${isExpanded ? 'expanded' : ''}" id="hist_row_${item.id}">
+        <div class="history-item-header" onclick="toggleHistoryItem('${item.id}', event)">
+          <div class="history-header-left">
+            <span class="history-num-badge">${esc(item.kpNumber || 'КП')}</span>
+            <div class="history-client-address">
+              <span class="history-client-name">${esc(item.client || 'Частное лицо')}</span>
+              <span class="history-address-text">• ${esc(item.address || 'г. Санкт-Петербург')}</span>
             </div>
           </div>
-          <div class="history-calc-sum">${esc(item.totalFormatted || rub(item.total || 0))}</div>
+          <div class="history-header-right">
+            <span class="history-sum-text">${esc(item.totalFormatted || rub(item.total || 0))}</span>
+            <div class="history-chevron">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+          </div>
         </div>
 
-        ${tagsHtml ? `<div class="history-card-tags">${tagsHtml}</div>` : ''}
+        <div class="history-item-body">
+          <div class="history-body-meta">
+            <span>📅 Дата: <b>${esc(item.dateFormatted || '')}</b></span>
+            <span>📄 Номер КП: <b>${esc(item.kpNumber || '')}</b></span>
+          </div>
 
-        <div class="history-card-actions">
-          <button type="button" class="btn b-primary btn-sm" onclick="openEditCalculationModal('${item.id}')" title="Выбрать: изменить этот расчёт или создать копию">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            <span>Редактировать</span>
-          </button>
-          <button type="button" class="btn ghost btn-sm" onclick="duplicateCalculationFromHistory('${item.id}'); closeModal('historyModal');" title="Создать копию с новым порядковым номером КП">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            <span>Копия (Новый №)</span>
-          </button>
-          <button type="button" class="btn ghost btn-sm" onclick="copyHistoryQuote('${item.id}')" title="Скопировать смету в буфер обмена">
-            <span>Смета</span>
-          </button>
-          <button type="button" class="btn-del-hist" onclick="deleteHistoryItem('${item.id}', event)" title="Удалить этот расчёт из истории">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          </button>
+          ${tagsHtml ? `<div class="history-body-tags">${tagsHtml}</div>` : ''}
+
+          <div class="history-body-actions">
+            <button type="button" class="btn b-primary btn-sm" onclick="openEditCalculationModal('${item.id}')" title="Выбрать: изменить этот расчёт или создать копию">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <span>Редактировать</span>
+            </button>
+            <button type="button" class="btn ghost btn-sm" onclick="duplicateCalculationFromHistory('${item.id}'); closeModal('historyModal');" title="Создать копию с новым порядковым номером КП">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Копия (Новый №)</span>
+            </button>
+            <button type="button" class="btn ghost btn-sm" onclick="copyHistoryQuote('${item.id}')" title="Скопировать смету в буфер обмена">
+              <span>Смета</span>
+            </button>
+            <button type="button" class="btn-del-hist" onclick="deleteHistoryItem('${item.id}', event)" title="Удалить этот расчёт из истории">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -2700,7 +2722,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=1.8').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=1.9').then(reg => {
       reg.update();
     }).catch(() => {});
   }
