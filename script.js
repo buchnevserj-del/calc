@@ -269,6 +269,33 @@ const rub = n => fmt(n) + ' ₽';
 const roundUp500 = n => n > 0 ? Math.ceil(n / 500) * 500 : 0;
 const esc = s => String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
+let isDealerMode = false;
+function checkDealerMode() {
+  try {
+    const s = (typeof window !== 'undefined' && window.location && window.location.search) ? window.location.search : '';
+    if (s && (s.includes('dealer=1') || s.includes('mode=dealer'))) {
+      isDealerMode = true;
+      if (typeof document !== 'undefined' && document.documentElement) {
+        document.documentElement.classList.add('dealer-mode');
+      }
+    }
+  } catch(e) {}
+}
+checkDealerMode();
+
+function copyDealerLink() {
+  const base = window.location.origin + window.location.pathname;
+  const dealerUrl = base.replace(/\/$/, '') + '/?mode=dealer';
+  
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(dealerUrl).then(() => {
+      showToast('Дилерская ссылка скопирована! 📋 (В ней скрыты цены за метр/штуку и формулы)');
+    }).catch(() => fallbackCopy(dealerUrl));
+  } else {
+    fallbackCopy(dealerUrl);
+  }
+}
+
 function focusPosNameInput() {
   const inp = el('posNameInput');
   if (inp) {
@@ -991,30 +1018,30 @@ function buildActiveSelects() {
     }
     const r = el('railSelect');
     if (r) {
-      r.innerHTML = D.railings.rail.map(item => `<option value="${item.name}">${item.price > 0 ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
+      r.innerHTML = D.railings.rail.map(item => `<option value="${item.name}">${(!isDealerMode && item.price > 0) ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
       if (curPos.railSelect) r.value = curPos.railSelect;
     }
   } else if (cat === 'balconies') {
     const s = el('balconyGlass');
     if (s) {
-      s.innerHTML = Object.keys(D.balconies.glass).map(k => `<option value="${k}">${k} — ${fmt(D.balconies.glass[k].price)} ₽/м²</option>`).join('');
+      s.innerHTML = Object.keys(D.balconies.glass).map(k => `<option value="${k}">${!isDealerMode ? k + ' — ' + fmt(D.balconies.glass[k].price) + ' ₽/м²' : k}</option>`).join('');
       if (curPos.glass && D.balconies.glass[curPos.glass]) s.value = curPos.glass;
     }
     const r = el('railSelect');
     if (r) {
-      r.innerHTML = D.balconies.rail.map(item => `<option value="${item.name}">${item.price > 0 ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
+      r.innerHTML = D.balconies.rail.map(item => `<option value="${item.name}">${(!isDealerMode && item.price > 0) ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
       if (curPos.railSelect) r.value = curPos.railSelect;
     }
   } else if (cat === 'showers') {
     const s = el('shGlass');
     if (s) {
-      s.innerHTML = Object.keys(D.showers.glass).map(k => `<option value="${k}">${k} — ${fmt(D.showers.glass[k].price)} ₽/м²</option>`).join('');
+      s.innerHTML = Object.keys(D.showers.glass).map(k => `<option value="${k}">${!isDealerMode ? k + ' — ' + fmt(D.showers.glass[k].price) + ' ₽/м²' : k}</option>`).join('');
       if (curPos.glass && D.showers.glass[curPos.glass]) s.value = curPos.glass;
     }
   } else if (cat === 'loft') {
     const s = el('loftGlass');
     if (s) {
-      s.innerHTML = Object.keys(D.loft.glass).map(k => `<option value="${k}">${k} — ${fmt(D.loft.glass[k].price)} ₽/м²</option>`).join('');
+      s.innerHTML = Object.keys(D.loft.glass).map(k => `<option value="${k}">${!isDealerMode ? k + ' — ' + fmt(D.loft.glass[k].price) + ' ₽/м²' : k}</option>`).join('');
       if (curPos.glass && D.loft.glass[curPos.glass]) s.value = curPos.glass;
     }
   }
@@ -1278,7 +1305,7 @@ function calc() {
     const g = D.railings.glass[gName] || { trap: 0, rect: 0 };
     if (el('trapPrice')) el('trapPrice').value = g.trap;
     if (el('rectPrice')) el('rectPrice').value = g.rect;
-    if (el('glassHint')) el('glassHint').textContent = `Трапеции — ${fmt(g.trap)} ₽/м² · Прямоугольники — ${fmt(g.rect)} ₽/м²`;
+    if (el('glassHint')) el('glassHint').textContent = !isDealerMode ? `Трапеции — ${fmt(g.trap)} ₽/м² · Прямоугольники — ${fmt(g.rect)} ₽/м²` : '';
     updateGlassSwatch(gName);
   } else if (curCat === 'balconies') {
     const gName = curItem.glass || Object.keys(D.balconies.glass)[0];
@@ -1287,18 +1314,18 @@ function calc() {
     const bH = parseFloat(curItem.heightMm) || 1000;
     const bArea = bLen > 0 ? +(bLen * (bH / 1000)).toFixed(2) : 0;
     if (el('balconyArea')) el('balconyArea').value = bArea > 0 ? bArea : '';
-    if (el('balconyAreaHint')) el('balconyAreaHint').textContent = bLen > 0 ? `${bLen} м × ${bH} мм = ${bArea} м²` : 'Длина × Высота';
-    if (el('glassHint')) el('glassHint').textContent = `Цена стекла — ${fmt(g.price || 10000)} ₽/м²`;
+    if (el('balconyAreaHint')) el('balconyAreaHint').textContent = !isDealerMode ? (bLen > 0 ? `${bLen} м × ${bH} мм = ${bArea} м²` : 'Длина × Высота') : (bArea > 0 ? `Площадь: ${bArea} м²` : '');
+    if (el('glassHint')) el('glassHint').textContent = !isDealerMode ? `Цена стекла — ${fmt(g.price || 10000)} ₽/м²` : '';
     updateGlassSwatch(gName);
   } else if (curCat === 'showers') {
     const gName = curItem.glass || Object.keys(D.showers.glass)[0];
     const g = D.showers.glass[gName] || { price: 0 };
-    if (el('glassHint')) el('glassHint').textContent = `Цена стекла 8 мм — ${fmt(g.price)} ₽/м²`;
+    if (el('glassHint')) el('glassHint').textContent = !isDealerMode ? `Цена стекла 8 мм — ${fmt(g.price)} ₽/м²` : '';
     updateGlassSwatch(gName);
   } else if (curCat === 'loft') {
     const gName = curItem.glass || Object.keys(D.loft.glass)[0];
     const g = D.loft.glass[gName] || { price: 0 };
-    if (el('glassHint')) el('glassHint').textContent = `Цена стекла 6 мм — ${fmt(g.price)} ₽/м²`;
+    if (el('glassHint')) el('glassHint').textContent = !isDealerMode ? `Цена стекла 6 мм — ${fmt(g.price)} ₽/м²` : '';
     updateGlassSwatch(gName);
   }
 
@@ -2860,6 +2887,7 @@ async function forceAppUpdate() {
 
 /* --- Init --- */
 function init() {
+  checkDealerMode();
   loadSavedConfig();
   loadSavedAppState();
   seedInitialHistoryIfEmpty();
@@ -2873,7 +2901,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=2.3').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=2.4').then(reg => {
       reg.update();
     }).catch(() => {});
   }

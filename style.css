@@ -999,6 +999,41 @@ input:checked + .slider:before {
   transform: translateX(-50%) translateY(0);
 }
 
+/* Dealer Mode Rules (Hidden Unit Prices, Hidden Formulas & Settings) */
+.dealer-mode .btn.b-dealer-link,
+.dealer-mode .btn.b-history,
+.dealer-mode .b-history-card,
+.dealer-mode .btn-float-history,
+.dealer-mode .btn.ghost[onclick*="openModal"],
+.dealer-mode .pt,
+.dealer-mode .hard-sum-col,
+.dealer-mode #trapPrice,
+.dealer-mode #rectPrice,
+.dealer-mode #glassHint,
+.dealer-mode .sub .grid .field:nth-child(2),
+.dealer-mode .card.highlight .hint,
+.dealer-mode .discount-markup-card {
+  display: none !important;
+}
+
+.dealer-mode .row3 {
+  grid-template-columns: 1fr 140px !important;
+}
+
+.b-dealer-link {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1.5px solid #bbf7d0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.b-dealer-link:hover {
+  background: #dcfce7;
+  color: #14532d;
+  border-color: #86efac;
+}
+
 /* History button in top header */
 .b-history {
   background: #ffffff;
