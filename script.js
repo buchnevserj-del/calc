@@ -286,12 +286,24 @@ function checkDealerMode() {
 checkDealerMode();
 
 function copyDealerLink() {
-  const base = window.location.origin + window.location.pathname;
-  const dealerUrl = base.replace(/\/$/, '') + '/?d';
-  
+  let dealerUrl = 'https://buchnevserj-del.github.io/calc/?d';
+
+  try {
+    if (typeof window !== 'undefined' && window.location) {
+      if (window.location.hostname && window.location.hostname.includes('github.io')) {
+        dealerUrl = 'https://buchnevserj-del.github.io/calc/?d';
+      } else {
+        const origin = window.location.origin || '';
+        let path = window.location.pathname || '';
+        path = path.replace(/\/index\.html$/i, '').replace(/index\.html$/i, '').replace(/\/+$/, '');
+        dealerUrl = origin + (path ? path : '') + '/?d';
+      }
+    }
+  } catch(e) {}
+
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(dealerUrl).then(() => {
-      showToast('Короткая дилерская ссылка скопирована! 📋 (?d)');
+      showToast('Дилерская ссылка скопирована! 📋');
     }).catch(() => fallbackCopy(dealerUrl));
   } else {
     fallbackCopy(dealerUrl);
@@ -2903,7 +2915,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=2.7').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=2.8').then(reg => {
       reg.update();
     }).catch(() => {});
   }
