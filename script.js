@@ -1911,6 +1911,7 @@ function fallbackCopy(text) {
 const MAX_HISTORY_ITEMS = 40;
 let activeEditingHistoryId = null;
 let pendingEditChoiceId = null;
+let expandedHistoryId = null;
 
 function getSavedHistory() {
   try {
@@ -2147,7 +2148,7 @@ function toggleHistoryItem(id, event) {
   if (willExpand) {
     setTimeout(() => {
       const row = document.getElementById(`hist_row_${id}`);
-      if (row) {
+      if (row && typeof row.scrollIntoView === 'function') {
         row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }, 40);
@@ -2477,20 +2478,20 @@ function closeModal(id) {
 }
 
 function verifyPin() {
-  const entered = el('pinInput').value.trim();
-  const currentPin = (D.misc && D.misc.pin) ? String(D.misc.pin) : '0120';
+  const entered = String((el('pinInput') && el('pinInput').value) || '').trim();
+  const currentPin = String((D && D.misc && D.misc.pin) || '0120').trim();
   if (entered === currentPin) {
     isAdminUnlocked = true;
     closeModal('pinModal');
-    showToast('Режим администратора активирован 🔓');
-    if (pendingModalId) {
-      const target = pendingModalId;
-      pendingModalId = null;
-      openModal(target);
-    }
+    showToast('Доступ разрешён 🔓');
+    const target = pendingModalId || 'historyModal';
+    pendingModalId = null;
+    openModal(target);
   } else {
-    el('pinError').style.display = 'block';
-    el('pinInput').select();
+    const pErr = el('pinError');
+    if (pErr) pErr.style.display = 'block';
+    const pInp = el('pinInput');
+    if (pInp) pInp.select();
   }
 }
 
@@ -2872,7 +2873,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=2.1').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=2.3').then(reg => {
       reg.update();
     }).catch(() => {});
   }
