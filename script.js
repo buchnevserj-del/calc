@@ -278,6 +278,8 @@ function checkDealerMode() {
       if (typeof document !== 'undefined' && document.documentElement) {
         document.documentElement.classList.add('dealer-mode');
       }
+      const dmLabel = el('dmHeaderLabel');
+      if (dmLabel) dmLabel.textContent = 'Наценка дилера';
     }
   } catch(e) {}
 }
@@ -1150,7 +1152,7 @@ function setAdjMode(mode) {
   } else if (mode === 'markup') {
     if (tabMark) tabMark.classList.add('active-markup');
     if (inputWrap) inputWrap.style.display = 'block';
-    if (inputLabel) inputLabel.textContent = 'Размер наценки / бонуса, %';
+    if (inputLabel) inputLabel.textContent = isDealerMode ? 'Размер вашей наценки, %' : 'Размер наценки / бонуса, %';
     if (pctInp && !pctInp.value) pctInp.value = '15';
   } else {
     if (tabNone) tabNone.classList.add('active');
@@ -2901,7 +2903,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=2.4').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=2.5').then(reg => {
       reg.update();
     }).catch(() => {});
   }

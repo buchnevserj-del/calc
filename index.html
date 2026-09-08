@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2.4">
+<link rel="stylesheet" href="style.css?v=2.5">
 </head>
 <body>
 <div class="wrap">
@@ -25,10 +25,6 @@
       <img src="logo.png" alt="GLASS LOFT — Стеклянные конструкции под ключ" class="brand-logo-img">
     </div>
     <div class="header-actions">
-      <button class="btn b-dealer-link" onclick="copyDealerLink()" title="Скопировать дилерскую ссылку (скрыты цены за метр/штуку и формулы)">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-        <span>Дилерам</span>
-      </button>
       <button class="btn b-history" onclick="openModal('historyModal')" title="История последних 40 расчётов (защищено PIN-кодом)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         <span>История</span>
@@ -187,7 +183,7 @@
         <!-- Discount & Markup Adjuster -->
         <div class="discount-markup-card">
           <div class="dm-header">
-            <label>Корректировка сметы</label>
+            <label id="dmHeaderLabel">Корректировка сметы</label>
             <div class="dm-segmented">
               <button type="button" class="dm-tab active" id="dmTabNone" onclick="setAdjMode('none')">0% (Базовая)</button>
               <button type="button" class="dm-tab" id="dmTabDiscount" onclick="setAdjMode('discount')">🏷️ Скидка (-%)</button>
@@ -254,6 +250,12 @@
 
         <!-- Rendered Text Proposal Card -->
         <div id="quoteText"></div>
+
+        <!-- Dealer Link Copy Button -->
+        <button type="button" class="btn b-dealer-bottom" onclick="copyDealerLink()" title="Скопировать дилерскую ссылку (скрыты цены за метр/штуку и формулы)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          <span>🤝 Скопировать ссылку для дилеров</span>
+        </button>
       </section>
     </div>
 
@@ -629,6 +631,6 @@
 
 <script src="html2canvas.min.js"></script>
 <script src="jspdf.umd.min.js"></script>
-<script src="script.js?v=2.4"></script>
+<script src="script.js?v=2.5"></script>
 </body>
 </html>
