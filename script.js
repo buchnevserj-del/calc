@@ -2915,7 +2915,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=2.8').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=2.9').then(reg => {
       reg.update();
     }).catch(() => {});
   }
