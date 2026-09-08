@@ -272,8 +272,8 @@ const esc = s => String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").rep
 let isDealerMode = false;
 function checkDealerMode() {
   try {
-    const s = (typeof window !== 'undefined' && window.location && window.location.search) ? window.location.search : '';
-    if (s && (s.includes('dealer=1') || s.includes('mode=dealer'))) {
+    const s = (typeof window !== 'undefined' && window.location && (window.location.search || window.location.hash)) ? (window.location.search + window.location.hash).toLowerCase() : '';
+    if (s && (s.includes('dealer') || s.includes('?d') || s.includes('&d') || s.includes('#d'))) {
       isDealerMode = true;
       if (typeof document !== 'undefined' && document.documentElement) {
         document.documentElement.classList.add('dealer-mode');
@@ -287,11 +287,11 @@ checkDealerMode();
 
 function copyDealerLink() {
   const base = window.location.origin + window.location.pathname;
-  const dealerUrl = base.replace(/\/$/, '') + '/?mode=dealer';
+  const dealerUrl = base.replace(/\/$/, '') + '/?d';
   
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(dealerUrl).then(() => {
-      showToast('Дилерская ссылка скопирована! 📋 (В ней скрыты цены за метр/штуку и формулы)');
+      showToast('Короткая дилерская ссылка скопирована! 📋 (?d)');
     }).catch(() => fallbackCopy(dealerUrl));
   } else {
     fallbackCopy(dealerUrl);
@@ -2903,7 +2903,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=2.5').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=2.6').then(reg => {
       reg.update();
     }).catch(() => {});
   }
