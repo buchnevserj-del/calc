@@ -1157,12 +1157,14 @@ input:checked + .slider:before {
 }
 
 /* History Modal & Cards */
-.history-mbox {
-  width: min(740px, 100%);
-  padding: 22px;
-  max-height: 88vh;
-  display: flex;
-  flex-direction: column;
+.modal .mbox.history-mbox {
+  width: min(780px, 96vw);
+  max-height: 86vh;
+  height: 86vh;
+  padding: 20px 22px 14px;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }
 .history-modal-header {
   display: flex;
@@ -1170,7 +1172,7 @@ input:checked + .slider:before {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   padding-right: 32px;
   flex-shrink: 0;
 }
@@ -1212,7 +1214,7 @@ input:checked + .slider:before {
   border: 1.5px solid var(--line);
   padding: 8px 14px;
   border-radius: var(--radius-md);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   transition: all 0.15s;
   flex-shrink: 0;
 }
@@ -1235,13 +1237,27 @@ input:checked + .slider:before {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 52vh;
-  min-height: 140px;
-  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
   padding-right: 6px;
-  margin-bottom: 16px;
-  flex: 1;
+  margin-bottom: 12px;
+}
+.history-list-container::-webkit-scrollbar {
+  width: 6px;
+}
+.history-list-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.history-list-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.history-list-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .setting-name-inp {
@@ -1368,6 +1384,16 @@ input:checked + .slider:before {
   display: block;
 }
 
+.history-body-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--line);
+}
+
 .history-body-meta {
   display: flex;
   align-items: center;
@@ -1376,7 +1402,7 @@ input:checked + .slider:before {
   font-size: 11.5px;
   color: var(--text-muted);
   font-weight: 500;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .history-body-tags {
@@ -1384,16 +1410,13 @@ input:checked + .slider:before {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
 }
 
-.history-body-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+.history-mbox .admin-modal-footer {
+  flex-shrink: 0;
+  margin-top: auto;
   padding-top: 10px;
-  border-top: 1px dashed var(--line);
+  border-top: 1px solid var(--line);
 }
 
 @media (max-width: 600px) {

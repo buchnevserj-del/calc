@@ -2139,12 +2139,19 @@ function saveCurrentToHistory(isManual = false) {
   }
 }
 
-let expandedHistoryId = null;
-
 function toggleHistoryItem(id, event) {
   if (event && (event.target.closest('button') || event.target.closest('.btn-del-hist'))) return;
-  expandedHistoryId = (expandedHistoryId === id) ? null : id;
+  const willExpand = (expandedHistoryId !== id);
+  expandedHistoryId = willExpand ? id : null;
   renderHistoryList();
+  if (willExpand) {
+    setTimeout(() => {
+      const row = document.getElementById(`hist_row_${id}`);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 40);
+  }
 }
 
 function renderHistoryList() {
@@ -2212,13 +2219,6 @@ function renderHistoryList() {
         </div>
 
         <div class="history-item-body">
-          <div class="history-body-meta">
-            <span>📅 Дата: <b>${esc(item.dateFormatted || '')}</b></span>
-            <span>📄 Номер КП: <b>${esc(item.kpNumber || '')}</b></span>
-          </div>
-
-          ${tagsHtml ? `<div class="history-body-tags">${tagsHtml}</div>` : ''}
-
           <div class="history-body-actions">
             <button type="button" class="btn b-primary btn-sm" onclick="openEditCalculationModal('${item.id}')" title="Выбрать: изменить этот расчёт или создать копию">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -2235,6 +2235,13 @@ function renderHistoryList() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
+
+          <div class="history-body-meta">
+            <span>📅 Дата: <b>${esc(item.dateFormatted || '')}</b></span>
+            <span>📄 Номер КП: <b>${esc(item.kpNumber || '')}</b></span>
+          </div>
+
+          ${tagsHtml ? `<div class="history-body-tags">${tagsHtml}</div>` : ''}
         </div>
       </div>
     `;
@@ -2865,7 +2872,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=2.0').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=2.1').then(reg => {
       reg.update();
     }).catch(() => {});
   }
