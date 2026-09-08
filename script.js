@@ -663,7 +663,6 @@ function renderCategoryContent() {
   const pIdx = activePosIdx[cat];
   const curPos = items[pIdx] || items[0] || {};
   const curName = (curPos.name !== undefined && curPos.name !== '') ? curPos.name : getDefaultPositionName(cat, pIdx);
-  const presets = PRESET_SECTION_NAMES[cat] || [];
 
   let html = '';
 
@@ -678,15 +677,11 @@ function renderCategoryContent() {
         <span class="sec-title-hint">Отображается в шапке и смете КП</span>
       </div>
       <div class="sec-title-input-wrap">
-        <input type="text" class="sec-name-input" id="posNameInput" placeholder="например, Ограждение террасы, Балконное ограждение..." value="${esc(curName)}" oninput="onPositionNameChange()" autocomplete="off">
+        <input type="text" class="sec-name-input" id="posNameInput" placeholder="например, Балконное ограждение 1 этаж, Ограждение террасы..." value="${esc(curName)}" oninput="onPositionNameChange()" autocomplete="off">
         <button type="button" class="btn-reset-name" onclick="resetPositionName()" title="Сбросить к исходному названию">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
           Сброс
         </button>
-      </div>
-      <div class="sec-title-suggestions">
-        <span class="sec-sugg-title">Быстрый выбор:</span>
-        ${presets.map(p => `<button type="button" class="sec-sugg-chip" onclick="applyPresetName('${esc(p)}')">${esc(p)}</button>`).join('')}
       </div>
     </div>
   `;
@@ -702,7 +697,7 @@ function renderCategoryContent() {
           <div class="field">
             <label>Длина трапеций / наклонных секций</label>
             <div class="input-wrap">
-              <input type="number" id="trapLen" placeholder="0" min="0" step="0.01" oninput="calcFromLength()">
+              <input type="number" id="trapLen" value="${curPos.trapLen || ''}" placeholder="0" min="0" step="0.01" oninput="calcFromLength()">
               <span class="unit">м.пог</span>
             </div>
             <div class="hint">× 1,25 + 35% → в пункт 2 (м²)</div>
@@ -710,7 +705,7 @@ function renderCategoryContent() {
           <div class="field">
             <label>Длина прямоугольников / прямых секций</label>
             <div class="input-wrap">
-              <input type="number" id="rectLen" placeholder="0" min="0" step="0.01" oninput="calcFromLength()">
+              <input type="number" id="rectLen" value="${curPos.rectLen || ''}" placeholder="0" min="0" step="0.01" oninput="calcFromLength()">
               <span class="unit">м.пог</span>
             </div>
             <div class="hint">× 1,25 → в пункт 2 (м²)</div>
@@ -741,14 +736,14 @@ function renderCategoryContent() {
         <div class="sub">
           <div class="sub-title"><b>Фигуры (трапеции)</b></div>
           <div class="grid" style="margin-top:10px">
-            <div class="field"><label>Площадь</label><div class="input-wrap"><input type="number" id="trapArea" placeholder="0" min="0" step="0.01" oninput="calc()"><span class="unit">м²</span></div></div>
+            <div class="field"><label>Площадь</label><div class="input-wrap"><input type="number" id="trapArea" value="${curPos.trapArea || ''}" placeholder="0" min="0" step="0.01" oninput="calc()"><span class="unit">м²</span></div></div>
             <div class="field"><label>Цена за м²</label><div class="input-wrap"><input type="number" id="trapPrice" readonly><span class="unit">₽/м²</span></div></div>
           </div>
         </div>
         <div class="sub">
           <div class="sub-title"><b>Прямоугольники</b></div>
           <div class="grid" style="margin-top:10px">
-            <div class="field"><label>Площадь</label><div class="input-wrap"><input type="number" id="rectArea" placeholder="0" min="0" step="0.01" oninput="calc()"><span class="unit">м²</span></div></div>
+            <div class="field"><label>Площадь</label><div class="input-wrap"><input type="number" id="rectArea" value="${curPos.rectArea || ''}" placeholder="0" min="0" step="0.01" oninput="calc()"><span class="unit">м²</span></div></div>
             <div class="field"><label>Цена за м²</label><div class="input-wrap"><input type="number" id="rectPrice" readonly><span class="unit">₽/м²</span></div></div>
           </div>
         </div>
@@ -772,8 +767,8 @@ function renderCategoryContent() {
         <label>Тип поручня</label>
         <select id="railSelect" onchange="calc()"></select>
         <div class="grid" style="margin-top:12px">
-          <div class="field"><label>Длина</label><div class="input-wrap"><input type="number" id="railLength" placeholder="—" min="0" step="0.1" oninput="calc()"><span class="unit">м.пог</span></div></div>
-          <div class="field"><label>Сумма вручную</label><div class="input-wrap"><input type="number" id="railManual" placeholder="авто" min="0" step="100" oninput="calc()"><span class="unit">₽</span></div></div>
+          <div class="field"><label>Длина</label><div class="input-wrap"><input type="number" id="railLength" value="${curPos.railLength || ''}" placeholder="—" min="0" step="0.1" oninput="calc()"><span class="unit">м.пог</span></div></div>
+          <div class="field"><label>Сумма вручную</label><div class="input-wrap"><input type="number" id="railManual" value="${curPos.railManual || ''}" placeholder="авто" min="0" step="100" oninput="calc()"><span class="unit">₽</span></div></div>
         </div>
         <div class="hint" id="railHint"></div>
       </section>
@@ -791,7 +786,7 @@ function renderCategoryContent() {
           <div class="field">
             <label>Длина ограждения</label>
             <div class="input-wrap">
-              <input type="number" id="balconyLen" placeholder="0" min="0" step="0.01" oninput="calc()">
+              <input type="number" id="balconyLen" value="${curPos.length || ''}" placeholder="0" min="0" step="0.01" oninput="calc()">
               <span class="unit">м.пог</span>
             </div>
             <div class="hint">Общая длина прямого контура</div>
@@ -799,7 +794,7 @@ function renderCategoryContent() {
           <div class="field">
             <label>Высота стекла</label>
             <div class="input-wrap">
-              <input type="number" id="balconyHeightMm" placeholder="1000" min="100" step="10" oninput="calc()">
+              <input type="number" id="balconyHeightMm" value="${curPos.heightMm !== undefined ? curPos.heightMm : '1000'}" placeholder="1000" min="100" step="10" oninput="calc()">
               <span class="unit">мм</span>
             </div>
             <div class="hint">Стандарт: 1000–1200 мм</div>
@@ -850,8 +845,8 @@ function renderCategoryContent() {
         <label>Тип поручня</label>
         <select id="railSelect" onchange="calc()"></select>
         <div class="grid" style="margin-top:12px">
-          <div class="field"><label>Длина</label><div class="input-wrap"><input type="number" id="railLength" placeholder="—" min="0" step="0.1" oninput="calc()"><span class="unit">м.пог</span></div></div>
-          <div class="field"><label>Сумма вручную</label><div class="input-wrap"><input type="number" id="railManual" placeholder="авто" min="0" step="100" oninput="calc()"><span class="unit">₽</span></div></div>
+          <div class="field"><label>Длина</label><div class="input-wrap"><input type="number" id="railLength" value="${curPos.railLength || ''}" placeholder="—" min="0" step="0.1" oninput="calc()"><span class="unit">м.пог</span></div></div>
+          <div class="field"><label>Сумма вручную</label><div class="input-wrap"><input type="number" id="railManual" value="${curPos.railManual || ''}" placeholder="авто" min="0" step="100" oninput="calc()"><span class="unit">₽</span></div></div>
         </div>
         <div class="hint" id="railHint"></div>
       </section>
@@ -869,7 +864,7 @@ function renderCategoryContent() {
           <div class="field">
             <label>Глухие стеклянные перегородки</label>
             <div class="input-wrap">
-              <input type="number" id="shFixedArea" placeholder="0" min="0" step="0.01" oninput="calc()">
+              <input type="number" id="shFixedArea" value="${curPos.fixedArea || ''}" placeholder="0" min="0" step="0.01" oninput="calc()">
               <span class="unit">м²</span>
             </div>
             <div class="hint">Площадь неподвижных секций</div>
@@ -877,7 +872,7 @@ function renderCategoryContent() {
           <div class="field">
             <label>Распашные / раздвижные створки</label>
             <div class="input-wrap">
-              <input type="number" id="shDoorArea" placeholder="0" min="0" step="0.01" oninput="calc()">
+              <input type="number" id="shDoorArea" value="${curPos.doorArea || ''}" placeholder="0" min="0" step="0.01" oninput="calc()">
               <span class="unit">м²</span>
             </div>
             <div class="hint">Площадь подвижных дверей</div>
@@ -924,7 +919,7 @@ function renderCategoryContent() {
           <div class="field">
             <label>Общая площадь остекления</label>
             <div class="input-wrap">
-              <input type="number" id="loftArea" placeholder="0" min="0" step="0.01" oninput="calc()">
+              <input type="number" id="loftArea" value="${curPos.area || ''}" placeholder="0" min="0" step="0.01" oninput="calc()">
               <span class="unit">м²</span>
             </div>
             <div class="hint">Ширина × Высота конструкции</div>
@@ -932,7 +927,7 @@ function renderCategoryContent() {
           <div class="field">
             <label>Длина каркасного профиля</label>
             <div class="input-wrap">
-              <input type="number" id="loftProfileLen" placeholder="0" min="0" step="0.1" oninput="calc()">
+              <input type="number" id="loftProfileLen" value="${curPos.profileLen || ''}" placeholder="0" min="0" step="0.1" oninput="calc()">
               <span class="unit">м.пог</span>
             </div>
             <div class="hint">Внешний контур и коробка</div>
@@ -940,7 +935,7 @@ function renderCategoryContent() {
           <div class="field">
             <label>Длина раскладки (шпросов)</label>
             <div class="input-wrap">
-              <input type="number" id="loftGridLen" placeholder="0" min="0" step="0.1" oninput="calc()">
+              <input type="number" id="loftGridLen" value="${curPos.gridLen || ''}" placeholder="0" min="0" step="0.1" oninput="calc()">
               <span class="unit">м.пог</span>
             </div>
             <div class="hint">Внутренняя ячеистая сетка</div>
@@ -985,22 +980,43 @@ function renderCategoryContent() {
 
 function buildActiveSelects() {
   const cat = activeCategory;
+  const pIdx = activePosIdx[cat];
+  const curPos = (appState[cat] && appState[cat][pIdx]) || {};
+
   if (cat === 'railings') {
     const s = el('glass');
-    if (s) s.innerHTML = Object.keys(D.railings.glass).map(k => `<option value="${k}">${k}</option>`).join('');
+    if (s) {
+      s.innerHTML = Object.keys(D.railings.glass).map(k => `<option value="${k}">${k}</option>`).join('');
+      if (curPos.glass && D.railings.glass[curPos.glass]) s.value = curPos.glass;
+    }
     const r = el('railSelect');
-    if (r) r.innerHTML = D.railings.rail.map(item => `<option value="${item.name}">${item.price > 0 ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
+    if (r) {
+      r.innerHTML = D.railings.rail.map(item => `<option value="${item.name}">${item.price > 0 ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
+      if (curPos.railSelect) r.value = curPos.railSelect;
+    }
   } else if (cat === 'balconies') {
     const s = el('balconyGlass');
-    if (s) s.innerHTML = Object.keys(D.balconies.glass).map(k => `<option value="${k}">${k} — ${fmt(D.balconies.glass[k].price)} ₽/м²</option>`).join('');
+    if (s) {
+      s.innerHTML = Object.keys(D.balconies.glass).map(k => `<option value="${k}">${k} — ${fmt(D.balconies.glass[k].price)} ₽/м²</option>`).join('');
+      if (curPos.glass && D.balconies.glass[curPos.glass]) s.value = curPos.glass;
+    }
     const r = el('railSelect');
-    if (r) r.innerHTML = D.balconies.rail.map(item => `<option value="${item.name}">${item.price > 0 ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
+    if (r) {
+      r.innerHTML = D.balconies.rail.map(item => `<option value="${item.name}">${item.price > 0 ? item.name + ' — ' + fmt(item.price) + ' ₽/м.пог' : item.name}</option>`).join('');
+      if (curPos.railSelect) r.value = curPos.railSelect;
+    }
   } else if (cat === 'showers') {
     const s = el('shGlass');
-    if (s) s.innerHTML = Object.keys(D.showers.glass).map(k => `<option value="${k}">${k} — ${fmt(D.showers.glass[k].price)} ₽/м²</option>`).join('');
+    if (s) {
+      s.innerHTML = Object.keys(D.showers.glass).map(k => `<option value="${k}">${k} — ${fmt(D.showers.glass[k].price)} ₽/м²</option>`).join('');
+      if (curPos.glass && D.showers.glass[curPos.glass]) s.value = curPos.glass;
+    }
   } else if (cat === 'loft') {
     const s = el('loftGlass');
-    if (s) s.innerHTML = Object.keys(D.loft.glass).map(k => `<option value="${k}">${k} — ${fmt(D.loft.glass[k].price)} ₽/м²</option>`).join('');
+    if (s) {
+      s.innerHTML = Object.keys(D.loft.glass).map(k => `<option value="${k}">${k} — ${fmt(D.loft.glass[k].price)} ₽/м²</option>`).join('');
+      if (curPos.glass && D.loft.glass[curPos.glass]) s.value = curPos.glass;
+    }
   }
 }
 
@@ -1017,27 +1033,33 @@ function buildHardList() {
   const listEl = el('hardList');
   if (!listEl) return;
   const cat = activeCategory;
+  const pIdx = activePosIdx[cat];
+  const curPos = (appState[cat] && appState[cat][pIdx]) || {};
   const hardItems = D[cat].hard || [];
 
-  listEl.innerHTML = hardItems.map((item, idx) => `
-    <div class="row3">
-      <div class="nm">${item.name}<span class="pt">${fmt(item.price)} ₽/${item.unit}</span></div>
-      <div>
-        <label>Кол-во (${item.unit})</label>
-        <div class="stepper">
-          <button type="button" class="stepper-btn" onclick="stepHard(${idx}, -1)">−</button>
-          <input type="number" class="hardQty" data-idx="${idx}" placeholder="0" min="0" step="any" oninput="calc()">
-          <button type="button" class="stepper-btn" onclick="stepHard(${idx}, 1)">+</button>
+  listEl.innerHTML = hardItems.map((item, idx) => {
+    const qtyVal = (curPos.hardQty && curPos.hardQty[idx]) || '';
+    const sumVal = (curPos.hardSum && curPos.hardSum[idx]) || '';
+    return `
+      <div class="row3">
+        <div class="nm">${item.name}<span class="pt">${fmt(item.price)} ₽/${item.unit}</span></div>
+        <div>
+          <label>Кол-во (${item.unit})</label>
+          <div class="stepper">
+            <button type="button" class="stepper-btn" onclick="stepHard(${idx}, -1)">−</button>
+            <input type="number" class="hardQty" data-idx="${idx}" value="${qtyVal}" placeholder="0" min="0" step="any" oninput="calc()">
+            <button type="button" class="stepper-btn" onclick="stepHard(${idx}, 1)">+</button>
+          </div>
         </div>
-      </div>
-      <div>
-        <label>Сумма, ₽</label>
-        <div class="input-wrap">
-          <input type="number" class="hardSum" data-idx="${idx}" placeholder="авто" min="0" step="100" oninput="calc()">
-          <span class="unit">₽</span>
+        <div>
+          <label>Сумма, ₽</label>
+          <div class="input-wrap">
+            <input type="number" class="hardSum" data-idx="${idx}" value="${sumVal}" placeholder="авто" min="0" step="100" oninput="calc()">
+            <span class="unit">₽</span>
+          </div>
         </div>
-      </div>
-    </div>`).join('');
+      </div>`;
+  }).join('');
 }
 
 function buildServiceList() {
@@ -2527,6 +2549,46 @@ function renderSettingsFor(id) {
   }
 }
 
+function renameGlass(oldName, newName) {
+  const cat = activeCategory;
+  const n = String(newName || '').trim();
+  if (!n) {
+    alert('Название стекла не может быть пустым');
+    renderGlassSettings();
+    return;
+  }
+  if (n === oldName) return;
+
+  const glassData = D[cat].glass;
+  if (glassData[n]) {
+    alert('Стекло с таким названием уже существует');
+    renderGlassSettings();
+    return;
+  }
+
+  const newGlassData = {};
+  for (const k in glassData) {
+    if (k === oldName) {
+      newGlassData[n] = glassData[oldName];
+    } else {
+      newGlassData[k] = glassData[k];
+    }
+  }
+  D[cat].glass = newGlassData;
+
+  if (appState[cat]) {
+    appState[cat].forEach(p => {
+      if (p.glass === oldName) p.glass = n;
+    });
+  }
+
+  buildActiveSelects();
+  renderGlassSettings();
+  autoSave();
+  calc();
+  showToast(`Стекло переименовано: «${n}» ✏️`);
+}
+
 function renderGlassSettings() {
   const cat = activeCategory;
   const glassData = D[cat].glass;
@@ -2542,9 +2604,9 @@ function renderGlassSettings() {
   if (cat === 'railings') {
     el('eGlass').innerHTML = Object.keys(glassData).map(k => `
       <div class="srow three">
-        <span>${k}</span>
-        <input type="number" value="${glassData[k].trap}" step="100" onchange="D.railings.glass['${esc(k)}'].trap=+this.value||0; buildActiveSelects(); autoSave(); calc();">
-        <input type="number" value="${glassData[k].rect}" step="100" onchange="D.railings.glass['${esc(k)}'].rect=+this.value||0; buildActiveSelects(); autoSave(); calc();">
+        <input type="text" class="setting-name-inp" value="${esc(k)}" onchange="renameGlass('${esc(k)}', this.value)" title="Нажмите, чтобы изменить название">
+        <input type="number" value="${glassData[k].trap}" step="100" title="Трапеция ₽/м²" onchange="D.railings.glass['${esc(k)}'].trap=+this.value||0; buildActiveSelects(); autoSave(); calc();">
+        <input type="number" value="${glassData[k].rect}" step="100" title="Прямоугольник ₽/м²" onchange="D.railings.glass['${esc(k)}'].rect=+this.value||0; buildActiveSelects(); autoSave(); calc();">
         <button class="btn b-red" onclick="delGlass('${esc(k)}')">✕</button>
       </div>`).join('');
     el('glassModalActions').innerHTML = `
@@ -2556,8 +2618,8 @@ function renderGlassSettings() {
   } else {
     el('eGlass').innerHTML = Object.keys(glassData).map(k => `
       <div class="srow two">
-        <span>${k}</span>
-        <input type="number" value="${glassData[k].price}" step="100" onchange="D['${cat}'].glass['${esc(k)}'].price=+this.value||0; buildActiveSelects(); autoSave(); calc();">
+        <input type="text" class="setting-name-inp" value="${esc(k)}" onchange="renameGlass('${esc(k)}', this.value)" title="Нажмите, чтобы изменить название">
+        <input type="number" value="${glassData[k].price}" step="100" title="Цена ₽/м²" onchange="D['${cat}'].glass['${esc(k)}'].price=+this.value||0; buildActiveSelects(); autoSave(); calc();">
         <button class="btn b-red" onclick="delGlass('${esc(k)}')">✕</button>
       </div>`).join('');
     el('glassModalActions').innerHTML = `
@@ -2582,8 +2644,8 @@ function renderHardSettings() {
 
   el('eHard').innerHTML = hardList.map((item, idx) => `
     <div class="srow three">
-      <span>${item.name}</span>
-      <input type="number" value="${item.price}" step="50" onchange="D['${cat}'].hard[${idx}].price=+this.value||0; buildHardList(); autoSave(); calc();">
+      <input type="text" class="setting-name-inp" value="${esc(item.name)}" onchange="D['${cat}'].hard[${idx}].name=this.value.trim()||'${esc(item.name)}'; buildHardList(); autoSave(); calc();" title="Нажмите, чтобы изменить название">
+      <input type="number" value="${item.price}" step="50" title="Цена" onchange="D['${cat}'].hard[${idx}].price=+this.value||0; buildHardList(); autoSave(); calc();">
       <select onchange="D['${cat}'].hard[${idx}].unit=this.value; buildHardList(); autoSave(); calc();">
         <option value="шт" ${item.unit==='шт'?'selected':''}>шт</option>
         <option value="м.пог" ${item.unit==='м.пог'?'selected':''}>м.пог</option>
@@ -2605,8 +2667,8 @@ function renderRailSettings() {
   const cat = (activeCategory === 'balconies') ? 'balconies' : 'railings';
   el('eRail').innerHTML = D[cat].rail.map((item, idx) => `
     <div class="srow two">
-      <span>${item.name}</span>
-      <input type="number" value="${item.price}" step="100" onchange="D['${cat}'].rail[${idx}].price=+this.value||0; buildActiveSelects(); autoSave(); calc();">
+      <input type="text" class="setting-name-inp" value="${esc(item.name)}" onchange="D['${cat}'].rail[${idx}].name=this.value.trim()||'${esc(item.name)}'; buildActiveSelects(); autoSave(); calc();" title="Нажмите, чтобы изменить название">
+      <input type="number" value="${item.price}" step="100" title="Цена ₽/м.пог" onchange="D['${cat}'].rail[${idx}].price=+this.value||0; buildActiveSelects(); autoSave(); calc();">
       <button class="btn b-red" onclick="delRail(${idx})">✕</button>
     </div>`).join('');
 }
@@ -2614,9 +2676,90 @@ function renderRailSettings() {
 function renderServiceSettings() {
   el('eServ').innerHTML = D.services.map((s, idx) => `
     <div class="srow two">
-      <span>${s.name}</span>
+      <input type="text" class="setting-name-inp" value="${esc(s.name)}" onchange="D.services[${idx}].name=this.value.trim()||'${esc(s.name)}'; buildServiceList(); autoSave(); calc();" title="Нажмите, чтобы изменить название">
       <button class="btn b-red" onclick="delService(${idx})">✕</button>
     </div>`).join('');
+}
+
+function resetCalculatorToZero() {
+  appState = {
+    railings: [
+      {
+        id: 1,
+        name: "Лестничное ограждение",
+        trapLen: "", rectLen: "", trapArea: "", rectArea: "",
+        glass: Object.keys(D.railings.glass)[0],
+        hardQty: {}, hardSum: {},
+        railSelect: "Без поручня", railLength: "", railManual: "",
+        instOn: true, instMode: "fix", instFix: 35000, instPct: 30
+      }
+    ],
+    balconies: [
+      {
+        id: 1,
+        name: "Балконное ограждение",
+        length: "", heightMm: "1000",
+        glass: Object.keys(D.balconies.glass)[0],
+        hardQty: {}, hardSum: {},
+        railSelect: "Без поручня", railLength: "", railManual: "",
+        instOn: true, instMode: "fix", instFix: 35000, instPct: 30
+      }
+    ],
+    showers: [
+      {
+        id: 1,
+        name: "Душевое ограждение",
+        fixedArea: "", doorArea: "",
+        glass: Object.keys(D.showers.glass)[0],
+        hardQty: {}, hardSum: {},
+        instOn: true, instMode: "fix", instFix: 15000, instPct: 30
+      }
+    ],
+    loft: [
+      {
+        id: 1,
+        name: "Лофт-перегородка",
+        area: "", profileLen: "", gridLen: "",
+        glass: Object.keys(D.loft.glass)[0],
+        hardQty: {}, hardSum: {},
+        instOn: true, instMode: "fix", instFix: 25000, instPct: 30
+      }
+    ]
+  };
+
+  activePosIdx = { railings: 0, balconies: 0, showers: 0, loft: 0 };
+  activeCategory = 'railings';
+
+  if (el('calcClient')) el('calcClient').value = 'Частное лицо';
+  if (el('calcAddress')) el('calcAddress').value = 'г. Санкт-Петербург';
+
+  setAdjMode('none');
+
+  document.querySelectorAll('.servPrice').forEach(inp => { inp.value = ''; });
+
+  termManual = false;
+
+  activeEditingHistoryId = null;
+  if (el('editModeBanner')) el('editModeBanner').style.display = 'none';
+
+  saveAppState();
+
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  if (el('tabCatRailings')) el('tabCatRailings').classList.add('active');
+
+  renderCategoryContent();
+  renderPositionTabs();
+  loadStateToInputs();
+  calc();
+
+  // Clear cache in background
+  try {
+    if ('caches' in window) {
+      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+    }
+  } catch(e) {}
+
+  showToast('Все расчёты и поля сброшены до нуля! 🔄');
 }
 
 function delGlass(name) {
@@ -2722,7 +2865,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=1.9').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=2.0').then(reg => {
       reg.update();
     }).catch(() => {});
   }

@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1.9">
+<link rel="stylesheet" href="style.css?v=2.0">
 </head>
 <body>
 <div class="wrap">
@@ -30,7 +30,7 @@
         <span>История</span>
         <span class="history-count-badge" id="historyCountBadge">0</span>
       </button>
-      <button class="btn ghost" onclick="forceAppUpdate()" title="Сбросить кэш и принудительно обновить приложение">
+      <button class="btn ghost" onclick="resetCalculatorToZero()" title="Сбросить все расчёты и поля к начальным значениям">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         <span>Обновить</span>
       </button>
@@ -625,6 +625,6 @@
 
 <script src="html2canvas.min.js"></script>
 <script src="jspdf.umd.min.js"></script>
-<script src="script.js?v=1.9"></script>
+<script src="script.js?v=2.0"></script>
 </body>
 </html>
