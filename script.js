@@ -1985,6 +1985,9 @@ function updateHistoryBadge() {
 }
 
 function seedInitialHistoryIfEmpty() {
+  const isSeeded = localStorage.getItem('glassloft_history_seeded_v2');
+  if (isSeeded) return;
+
   let history = getSavedHistory();
   if (history.length === 0) {
     const dates = getFormattedDates();
@@ -2009,52 +2012,11 @@ function seedInitialHistoryIfEmpty() {
           loft: [{ id: 1, name: 'Лофт-перегородка', area: '', profileLen: '', gridLen: '', glass: 'Классическое прозрачное (закаленное), 6 мм', hardQty: {}, hardSum: {}, instOn: true, instMode: 'fix', instFix: 25000, instPct: 30 }]
         },
         extraData: { delOn: true, delPrice: 7500, adjMode: 'none', adjPercent: '', termManual: false, termDays: '21', services: [] }
-      },
-      {
-        id: 'calc_init_2',
-        timestamp: Date.now() - 3600000 * 24,
-        dateFormatted: `01.09.2026, 16:45`,
-        seqNum: 7,
-        kpNumber: `№ 7/010926`,
-        client: 'Екатерина Васильева',
-        address: 'Ленинградская обл., КП Солнечное',
-        title: 'Екатерина Васильева — Ленинградская обл., КП Солнечное',
-        total: 340000,
-        totalFormatted: '340 000 ₽',
-        activeCategory: 'railings',
-        productsSummary: ['Лестничное ограждение', 'Ограждение террасы'],
-        appState: {
-          railings: [{ id: 1, name: 'Лестничное ограждение', trapLen: '8', rectLen: '6', trapArea: '13.5', rectArea: '7.5', glass: 'Триплекс 5+5 мм, классическое прозрачное', hardQty: { '0': '24' }, hardSum: {}, railSelect: 'Деревянный поручень 40×40, масло с воском', railLength: '14', railManual: '', instOn: true, instMode: 'fix', instFix: 45000, instPct: 30 }],
-          balconies: [{ id: 1, name: 'Ограждение террасы', length: '12', heightMm: '1100', glass: 'Триплекс 5+5 мм, классическое прозрачное', hardQty: { '0': '12' }, hardSum: {}, railSelect: 'Без поручня', railLength: '', railManual: '', instOn: true, instMode: 'fix', instFix: 35000, instPct: 30 }],
-          showers: [{ id: 1, name: 'Душевое ограждение', fixedArea: '', doorArea: '', glass: 'Классическое прозрачное (закаленное), 8 мм', hardQty: {}, hardSum: {}, instOn: true, instMode: 'fix', instFix: 15000, instPct: 30 }],
-          loft: [{ id: 1, name: 'Лофт-перегородка', area: '', profileLen: '', gridLen: '', glass: 'Классическое прозрачное (закаленное), 6 мм', hardQty: {}, hardSum: {}, instOn: true, instMode: 'fix', instFix: 25000, instPct: 30 }]
-        },
-        extraData: { delOn: true, delPrice: 7500, adjMode: 'none', adjPercent: '', termManual: false, termDays: '25', services: [] }
-      },
-      {
-        id: 'calc_init_3',
-        timestamp: Date.now() - 3600000 * 48,
-        dateFormatted: `30.08.2026, 14:10`,
-        seqNum: 6,
-        kpNumber: `№ 6/300826`,
-        client: 'Дмитрий Орлов',
-        address: 'г. Санкт-Петербург, Каменноостровский пр. 32',
-        title: 'Дмитрий Орлов — г. Санкт-Петербург, Каменноостровский пр. 32',
-        total: 78500,
-        totalFormatted: '78 500 ₽',
-        activeCategory: 'showers',
-        productsSummary: ['Душевое ограждение (4.5 м²)'],
-        appState: {
-          railings: [{ id: 1, name: 'Лестничное ограждение', trapLen: '', rectLen: '', trapArea: '', rectArea: '', glass: 'Классическое прозрачное (зеленоватая кромка), 10 мм', hardQty: {}, hardSum: {}, railSelect: 'Без поручня', railLength: '', railManual: '', instOn: true, instMode: 'fix', instFix: 35000, instPct: 30 }],
-          balconies: [{ id: 1, name: 'Балконное ограждение', length: '', heightMm: '1000', glass: 'Классическое прозрачное (зеленоватая кромка), 10 мм', hardQty: {}, hardSum: {}, railSelect: 'Без поручня', railLength: '', railManual: '', instOn: true, instMode: 'fix', instFix: 35000, instPct: 30 }],
-          showers: [{ id: 1, name: 'Душевое ограждение', fixedArea: '2.5', doorArea: '1.8', glass: 'Осветлённое Crystal Vision (без оттенка), 8 мм', hardQty: { '0': '2', '2': '4', '4': '1' }, hardSum: {}, instOn: true, instMode: 'fix', instFix: 15000, instPct: 30 }],
-          loft: [{ id: 1, name: 'Лофт-перегородка', area: '', profileLen: '', gridLen: '', glass: 'Классическое прозрачное (закаленное), 6 мм', hardQty: {}, hardSum: {}, instOn: true, instMode: 'fix', instFix: 25000, instPct: 30 }]
-        },
-        extraData: { delOn: true, delPrice: 7500, adjMode: 'none', adjPercent: '', termManual: false, termDays: '21', services: [] }
       }
     ];
     saveHistoryList(demoItems);
   }
+  localStorage.setItem('glassloft_history_seeded_v2', 'true');
 }
 
 function saveCurrentToHistory(isManual = false) {
@@ -2076,8 +2038,6 @@ function saveCurrentToHistory(isManual = false) {
     if (v !== null && v > 0) servSum += roundUp500(v * mult);
   });
   const total = allCategoriesTotal + delSum + servSum;
-
-  if (total === 0 && !isManual) return;
 
   const dates = getFormattedDates();
   const now = new Date();
@@ -2107,7 +2067,7 @@ function saveCurrentToHistory(isManual = false) {
   const title = `${clientVal} — ${addressVal}`;
   const history = getSavedHistory();
 
-  // If in active edit mode: update existing record in place
+  // 1. If in active edit mode: update existing record in place
   if (activeEditingHistoryId) {
     const existingIdx = history.findIndex(h => h.id === activeEditingHistoryId);
     if (existingIdx !== -1) {
@@ -2131,22 +2091,37 @@ function saveCurrentToHistory(isManual = false) {
         services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
       };
       saveHistoryList(history);
-      if (isManual) {
-        renderHistoryList();
-        showToast(`Расчёт «${title}» обновлён! 💾`);
-      }
+      renderHistoryList();
+      showToast(`Расчёт «${title}» обновлён! 💾`);
       return;
     }
   }
 
-  // Avoid duplicate rapid saves within 15 seconds
+  // 2. If the top item has the same client and address within 5 minutes, update it
   if (!isManual && history.length > 0) {
     const top = history[0];
-    if (top.client === clientVal && top.address === addressVal && top.total === total && (Date.now() - top.timestamp < 15000)) {
+    if (top.client === clientVal && top.address === addressVal && (Date.now() - top.timestamp < 300000)) {
+      top.total = total;
+      top.totalFormatted = rub(total);
+      top.dateFormatted = dateFormatted;
+      top.productsSummary = productsSummary;
+      top.appState = JSON.parse(JSON.stringify(appState));
+      top.extraData = {
+        delOn: el('delOn') ? el('delOn').checked : true,
+        delPrice: el('delPrice') ? el('delPrice').value : 7500,
+        adjMode: adjMode,
+        adjPercent: el('adjPercent') ? el('adjPercent').value : '',
+        termManual: termManual,
+        termDays: el('termDays') ? el('termDays').value : '',
+        services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
+      };
+      saveHistoryList(history);
+      renderHistoryList();
       return;
     }
   }
 
+  // 3. Otherwise, create a new record and add to history (newest first)
   const newRecord = {
     id: 'calc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     timestamp: Date.now(),
@@ -2174,9 +2149,9 @@ function saveCurrentToHistory(isManual = false) {
 
   history.unshift(newRecord);
   saveHistoryList(history);
+  renderHistoryList();
 
   if (isManual) {
-    renderHistoryList();
     showToast(`Расчёт «${title}» сохранён в историю! 💾`);
   }
 }
@@ -2876,8 +2851,7 @@ function autoSave() {
 function saveAll() {
   syncCurrentInputsToState();
   autoSave();
-  saveCurrentToHistory(false);
-  showToast('Все настройки и расчёт сохранены! 💾');
+  saveCurrentToHistory(true);
 }
 
 async function forceAppUpdate() {
@@ -2915,7 +2889,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=2.9').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=3.0').then(reg => {
       reg.update();
     }).catch(() => {});
   }
