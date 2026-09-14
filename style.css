@@ -1999,6 +1999,64 @@ input:checked + .slider:before {
   letter-spacing: -0.02em;
 }
 
+/* Selected Materials Thumbnails Gallery (Below Total Price in KP) */
+.kp-materials-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 12px;
+}
+
+.kp-mat-card {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.kp-mat-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.kp-mat-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.kp-mat-type {
+  font-size: 7.5px;
+  font-weight: 700;
+  color: #206774;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.kp-mat-title {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.25;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .kp-benefits-img {
   width: 100%;
   height: auto;

@@ -1606,6 +1606,81 @@ function getKpFileName(forcedDocNum, isMerged) {
   return `КП_${seqNum}-${dates.noDots}_${addrClean || 'объект'}`;
 }
 
+function getMaterialThumbnailHtml(activeList) {
+  const materials = [];
+  const addedKeys = new Set();
+
+  function addMaterial(type, title, imgPath) {
+    const key = `${type}_${title}_${imgPath}`;
+    if (!addedKeys.has(key) && imgPath) {
+      addedKeys.add(key);
+      materials.push({ type, title, imgPath });
+    }
+  }
+
+  activeList.forEach(cp => {
+    // 1. Glass mapping
+    const gName = cp.glassName || '';
+    if (/crystal|осветл/i.test(gName)) {
+      addMaterial('Стекло', gName, 'mat_glass_crystal.png');
+    } else if (/графит.*триплекс|триплекс.*графит/i.test(gName)) {
+      addMaterial('Стекло', gName, 'mat_glass_triplex_graphite.png');
+    } else if (/графит|серое/i.test(gName)) {
+      addMaterial('Стекло', gName, 'mat_glass_graphite.png');
+    } else if (/бронз/i.test(gName)) {
+      addMaterial('Стекло', gName, 'mat_glass_bronze.png');
+    } else {
+      addMaterial('Стекло', gName, 'mat_glass_classic.png');
+    }
+
+    // 2. Hardware mapping
+    const hardQty = (cp.pos && cp.pos.hardQty) || {};
+    const cat = cp.cat;
+    const hardItems = (D[cat] && D[cat].hard) || [];
+    
+    hardItems.forEach((h, hIdx) => {
+      const q = parseFloat(hardQty[hIdx]) || 0;
+      if (q > 0) {
+        if (/точечн/i.test(h.name)) {
+          addMaterial('Крепление', h.name, 'mat_hard_point.png');
+        } else if (/опорн.*профиль|профиль/i.test(h.name)) {
+          addMaterial('Крепление', h.name, 'mat_hard_profile.png');
+        } else if (/коннектор/i.test(h.name)) {
+          addMaterial('Фурнитура', h.name, 'mat_hard_connector.png');
+        }
+      }
+    });
+
+    // 3. Handrail mapping
+    if (cp.hasRail && cp.railName) {
+      const rName = cp.railName;
+      if (/дуб.*масло|масло.*воск/i.test(rName)) {
+        addMaterial('Поручень', rName, 'mat_rail_oak_oil.png');
+      } else if (/эмаль|покрас/i.test(rName)) {
+        addMaterial('Поручень', rName, 'mat_rail_paint.png');
+      } else if (/образц/i.test(rName)) {
+        addMaterial('Поручень', rName, 'mat_rail_custom.png');
+      }
+    }
+  });
+
+  if (materials.length === 0) return '';
+
+  return `
+    <div class="kp-materials-gallery">
+      ${materials.map(m => `
+        <div class="kp-mat-card">
+          <img src="${m.imgPath}" class="kp-mat-img" alt="${esc(m.title)}">
+          <div class="kp-mat-info">
+            <div class="kp-mat-type">${esc(m.type)}</div>
+            <div class="kp-mat-title">${esc(m.title)}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function updateKpDocumentData(forcedDocNum, isMerged) {
   const dates = getFormattedDates();
   const seqNum = forcedDocNum || currentKpSeqNumber || 1;
@@ -1795,6 +1870,11 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
   if (el('kpDocExpire')) el('kpDocExpire').textContent = dates.expStr;
 
   if (el('kpDocTableBody')) el('kpDocTableBody').innerHTML = rowsHtml;
+
+  const matGalleryEl = el('kpMaterialsGalleryContainer');
+  if (matGalleryEl) {
+    matGalleryEl.innerHTML = getMaterialThumbnailHtml(activeList);
+  }
 }
 
 let toastTimer = null;
@@ -2889,7 +2969,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=3.0').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=3.1').then(reg => {
       reg.update();
     }).catch(() => {});
   }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'glassloft-v3.0';
+const CACHE_NAME = 'glassloft-v3.1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -23,7 +23,18 @@ const ASSETS_TO_CACHE = [
   './cat_icon_stairs.png',
   './cat_icon_balcony.png',
   './cat_icon_shower.png',
-  './cat_icon_loft.png'
+  './cat_icon_loft.png',
+  './mat_glass_classic.png',
+  './mat_glass_crystal.png',
+  './mat_glass_graphite.png',
+  './mat_glass_bronze.png',
+  './mat_glass_triplex_graphite.png',
+  './mat_hard_point.png',
+  './mat_hard_profile.png',
+  './mat_hard_connector.png',
+  './mat_rail_oak_oil.png',
+  './mat_rail_paint.png',
+  './mat_rail_custom.png'
 ];
 
 // Install: pre-cache all application assets immediately
