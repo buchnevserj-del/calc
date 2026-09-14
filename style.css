@@ -1899,7 +1899,7 @@ input:checked + .slider:before {
 .kp-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 .kp-table th {
   background: #e4f1f4;
@@ -1947,7 +1947,8 @@ input:checked + .slider:before {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1.65fr;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-top: 6px;
+  margin-bottom: 8px;
   align-items: stretch;
 }
 .kp-info-card {
