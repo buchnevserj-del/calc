@@ -1329,11 +1329,15 @@ input:checked + .slider:before {
 }
 
 .history-item-row {
+  flex-shrink: 0 !important;
+  width: 100% !important;
   background: #ffffff;
   border: 1.5px solid var(--line);
   border-radius: var(--radius-md);
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .history-item-row:hover {
   border-color: var(--primary-border);
@@ -1346,6 +1350,7 @@ input:checked + .slider:before {
 }
 
 .history-item-header {
+  flex-shrink: 0 !important;
   display: flex;
   align-items: center;
   justify-content: space-between;

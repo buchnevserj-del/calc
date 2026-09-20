@@ -2786,6 +2786,8 @@ function renderServiceSettings() {
 }
 
 function resetCalculatorToZero() {
+  localStorage.removeItem('glassloft_app_state_v6');
+
   appState = {
     railings: [
       {
@@ -2838,6 +2840,9 @@ function resetCalculatorToZero() {
   if (el('calcAddress')) el('calcAddress').value = 'г. Санкт-Петербург';
 
   setAdjMode('none');
+
+  if (el('delPrice')) el('delPrice').value = D.misc.delivery || 7500;
+  if (el('delOn')) el('delOn').checked = true;
 
   document.querySelectorAll('.servPrice').forEach(inp => { inp.value = ''; });
 
@@ -2969,7 +2974,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=3.2').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=3.3').then(reg => {
       reg.update();
     }).catch(() => {});
   }
