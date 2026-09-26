@@ -99,6 +99,63 @@ body {
   }
 }
 
+/* Top Version & Build Status Bar */
+.app-top-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 14px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  user-select: none;
+}
+.app-status-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.status-dot-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  display: inline-block;
+  animation: pulseDot 2s infinite;
+}
+@keyframes pulseDot {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+.app-status-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.app-status-link {
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.15s;
+}
+.app-status-link:hover {
+  color: var(--primary);
+}
+
+@media (max-width: 600px) {
+  .app-top-status-bar {
+    font-size: 10px;
+    padding: 4px 10px;
+  }
+}
+
 /* Header & Branding */
 .top {
   display: flex;
