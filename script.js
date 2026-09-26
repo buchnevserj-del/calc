@@ -227,16 +227,34 @@ let appState = {
   ]
 };
 
+function sanitizePosition(pos, cat, idx) {
+  if (!pos || typeof pos !== 'object') pos = {};
+  if (!pos.id) pos.id = Date.now() + idx;
+  if (!pos.name) pos.name = getDefaultPositionName(cat, idx);
+  if (!pos.glass) {
+    const available = (D[cat] && D[cat].glass) ? Object.keys(D[cat].glass) : [];
+    pos.glass = available[0] || 'Классическое прозрачное';
+  }
+  if (!pos.hardQty || typeof pos.hardQty !== 'object') pos.hardQty = {};
+  if (!pos.hardSum || typeof pos.hardSum !== 'object') pos.hardSum = {};
+  if (pos.instOn === undefined) pos.instOn = true;
+  if (!pos.instMode) pos.instMode = 'fix';
+  if (pos.instFix === undefined) pos.instFix = (D.misc && D.misc.instFix) ? D.misc.instFix : 35000;
+  if (pos.instPct === undefined) pos.instPct = (D.misc && D.misc.instPct) ? D.misc.instPct : 30;
+  return pos;
+}
+
 function loadSavedAppState() {
   try {
     const saved = localStorage.getItem('glassloft_app_state_v6');
     if (saved) {
       const p = JSON.parse(saved);
       if (p && typeof p === 'object') {
-        if (Array.isArray(p.railings) && p.railings.length > 0) appState.railings = p.railings;
-        if (Array.isArray(p.balconies) && p.balconies.length > 0) appState.balconies = p.balconies;
-        if (Array.isArray(p.showers) && p.showers.length > 0) appState.showers = p.showers;
-        if (Array.isArray(p.loft) && p.loft.length > 0) appState.loft = p.loft;
+        ['railings', 'balconies', 'showers', 'loft'].forEach(cat => {
+          if (Array.isArray(p[cat]) && p[cat].length > 0) {
+            appState[cat] = p[cat].map((pos, idx) => sanitizePosition(pos, cat, idx));
+          }
+        });
       }
     }
   } catch(e) {}
@@ -2039,7 +2057,9 @@ function getSavedHistory() {
     const saved = localStorage.getItem('glassloft_calc_history_v1');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.filter(item => item && typeof item === 'object' && item.id);
+      }
     }
   } catch(e) {}
   return [];
@@ -2992,7 +3012,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=3.4').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=3.5').then(reg => {
       reg.update();
     }).catch(() => {});
   }
