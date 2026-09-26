@@ -2119,6 +2119,23 @@ function seedInitialHistoryIfEmpty() {
   localStorage.setItem('glassloft_history_seeded_v3', 'true');
 }
 
+function migrateHistoryDemoItems() {
+  try {
+    let history = getSavedHistory();
+    let changed = false;
+    history.forEach(item => {
+      if (item && item.id === 'calc_init_1' && (item.total === 165000 || item.totalFormatted === '165 000 ₽')) {
+        item.total = 182500;
+        item.totalFormatted = '182 500 ₽';
+        changed = true;
+      }
+    });
+    if (changed) {
+      saveHistoryList(history);
+    }
+  } catch(e) {}
+}
+
 function saveCurrentToHistory(isManual = false) {
   syncCurrentInputsToState();
   const clientVal = (el('calcClient') && el('calcClient').value.trim()) || 'Частное лицо';
@@ -3002,6 +3019,7 @@ function init() {
   loadSavedConfig();
   loadSavedAppState();
   seedInitialHistoryIfEmpty();
+  migrateHistoryDemoItems();
   renderCategoryContent();
   renderPositionTabs();
   buildServiceList();
@@ -3012,7 +3030,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=3.7').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=4.0').then(reg => {
       reg.update();
     }).catch(() => {});
   }
