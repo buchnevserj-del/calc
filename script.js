@@ -2317,11 +2317,11 @@ function renderHistoryList() {
 
         <div class="history-item-body">
           <div class="history-body-actions">
-            <button type="button" class="btn b-primary btn-sm" onclick="openEditCalculationModal('${item.id}')" title="Выбрать: изменить этот расчёт или создать копию">
+            <button type="button" class="btn b-primary btn-sm" onclick="loadCalculationFromHistory('${item.id}')" title="Открыть этот расчёт в калькуляторе для внесения правок">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
               <span>Редактировать</span>
             </button>
-            <button type="button" class="btn ghost btn-sm" onclick="duplicateCalculationFromHistory('${item.id}'); closeModal('historyModal');" title="Создать копию с новым порядковым номером КП">
+            <button type="button" class="btn ghost btn-sm" onclick="duplicateCalculationFromHistory('${item.id}')" title="Создать копию с новым порядковым номером КП">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               <span>Копия (Новый №)</span>
             </button>
@@ -2372,12 +2372,16 @@ function executeEditChoice(mode) {
   pendingEditChoiceId = null;
 }
 
-function startEditingHistoryItem(id) {
+function loadCalculationFromHistory(id) {
   const history = getSavedHistory();
   const item = history.find(h => h.id === id);
   if (!item) return;
 
   activeEditingHistoryId = id;
+  if (item.seqNum) currentKpSeqNumber = item.seqNum;
+
+  closeModal('historyModal');
+  closeModal('editChoiceModal');
 
   restoreCalculationData(item);
 
@@ -2386,7 +2390,14 @@ function startEditingHistoryItem(id) {
   if (banner) banner.style.display = 'flex';
   if (bannerTitle) bannerTitle.textContent = `${item.title || item.client} (${item.kpNumber || ''})`;
 
-  showToast(`Режим редактирования расчёта ${item.kpNumber || ''} ✏️`);
+  if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  showToast(`Расчёт «${item.title || item.client}» открыт для редактирования! ✏️`);
+}
+
+function startEditingHistoryItem(id) {
+  loadCalculationFromHistory(id);
 }
 
 async function duplicateCalculationFromHistory(id) {
@@ -2398,11 +2409,18 @@ async function duplicateCalculationFromHistory(id) {
   const banner = el('editModeBanner');
   if (banner) banner.style.display = 'none';
 
+  closeModal('historyModal');
+  closeModal('editChoiceModal');
+
   restoreCalculationData(item);
 
   const nextSeq = await fetchNextSequenceNumber();
+  currentKpSeqNumber = nextSeq;
   updateKpDocumentData(nextSeq, false);
 
+  if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
   const dates = getFormattedDates();
   showToast(`Создана копия с новым номером КП №${nextSeq}/${dates.noDots}! 📋`);
 }
@@ -2974,7 +2992,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=3.3').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=3.4').then(reg => {
       reg.update();
     }).catch(() => {});
   }
