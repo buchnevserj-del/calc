@@ -2085,7 +2085,7 @@ function updateHistoryBadge() {
 }
 
 function seedInitialHistoryIfEmpty() {
-  const isSeeded = localStorage.getItem('glassloft_history_seeded_v2');
+  const isSeeded = localStorage.getItem('glassloft_history_seeded_v3');
   if (isSeeded) return;
 
   let history = getSavedHistory();
@@ -2101,8 +2101,8 @@ function seedInitialHistoryIfEmpty() {
         client: 'Алексей Смирнов',
         address: 'г. Санкт-Петербург, Московский пр. 120',
         title: 'Алексей Смирнов — г. Санкт-Петербург, Московский пр. 120',
-        total: 165000,
-        totalFormatted: '165 000 ₽',
+        total: 182500,
+        totalFormatted: '182 500 ₽',
         activeCategory: 'balconies',
         productsSummary: ['Балконное ограждение 1 этаж (14 м.пог.)'],
         appState: {
@@ -2116,7 +2116,7 @@ function seedInitialHistoryIfEmpty() {
     ];
     saveHistoryList(demoItems);
   }
-  localStorage.setItem('glassloft_history_seeded_v2', 'true');
+  localStorage.setItem('glassloft_history_seeded_v3', 'true');
 }
 
 function saveCurrentToHistory(isManual = false) {
@@ -3012,7 +3012,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=3.6').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=3.7').then(reg => {
       reg.update();
     }).catch(() => {});
   }
