@@ -1108,59 +1108,6 @@ input:checked + .slider:before {
   box-shadow: 0 4px 14px rgba(34, 197, 94, 0.15);
 }
 
-/* Messengers 1-Click Send Bar */
-.messenger-send-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.btn.b-wa {
-  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-  color: #ffffff;
-  height: 42px;
-  padding: 0 10px;
-  font-size: 13px;
-  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.25);
-}
-.btn.b-wa:hover {
-  background: linear-gradient(135deg, #20bd5a 0%, #0e7266 100%);
-  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.35);
-}
-
-.btn.b-tg {
-  background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%);
-  color: #ffffff;
-  height: 42px;
-  padding: 0 10px;
-  font-size: 13px;
-  box-shadow: 0 4px 14px rgba(34, 158, 217, 0.25);
-}
-.btn.b-tg:hover {
-  background: linear-gradient(135deg, #209ad8 0%, #1c88bd 100%);
-  box-shadow: 0 6px 18px rgba(34, 158, 217, 0.35);
-}
-
-.btn.b-max {
-  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
-  color: #ffffff;
-  height: 42px;
-  padding: 0 10px;
-  font-size: 13px;
-  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25);
-}
-.btn.b-max:hover {
-  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
-  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35);
-}
-
-.client-grid {
-  grid-template-columns: 1fr 1fr;
-}
-.client-grid .field.full-width {
-  grid-column: 1 / -1;
-}
-
 /* History button in top header */
 .b-history {
   background: #ffffff;

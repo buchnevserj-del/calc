@@ -1918,66 +1918,6 @@ function copyQuote() {
   }
 }
 
-/* --- Messenger 1-Click Send System (WhatsApp, Telegram, MAX) --- */
-function getPoliteMessengerMessage() {
-  const clientVal = (el('calcClient') && el('calcClient').value.trim()) || 'Заказчик';
-  const addressVal = (el('calcAddress') && el('calcAddress').value.trim()) || 'г. Санкт-Петербург';
-  const quoteText = (el('quoteText') && el('quoteText').textContent.trim()) || '';
-  
-  let msg = `Здравствуйте${clientVal && clientVal !== 'Частное лицо' ? ', ' + clientVal : ''}!\n\n`;
-  msg += `Компания GlassLoft подготовила расчёт по вашему проекту:\n`;
-  msg += `📍 Объект: ${addressVal}\n\n`;
-  msg += `${quoteText}\n\n`;
-  msg += `Будем рады ответить на ваши вопросы и согласовать выезд инженера на замер!\n\n`;
-  msg += `С уважением, GlassLoft\n`;
-  msg += `📞 8-931-239-23-29 | 8-950-222-28-82\n`;
-  msg += `🌐 https://glass-loft.ru`;
-  
-  return msg;
-}
-
-function cleanPhoneForMessenger(phoneStr) {
-  if (!phoneStr) return '';
-  let digits = String(phoneStr).replace(/\D/g, '');
-  if (digits.startsWith('8') && digits.length === 11) {
-    digits = '7' + digits.slice(1);
-  }
-  return digits;
-}
-
-function sendToMessenger(messenger) {
-  saveCurrentToHistory(false);
-  const rawPhone = (el('calcPhone') && el('calcPhone').value.trim()) || '';
-  const cleanPhone = cleanPhoneForMessenger(rawPhone);
-  const text = getPoliteMessengerMessage();
-  const encodedText = encodeURIComponent(text);
-
-  if (messenger === 'whatsapp') {
-    let url = '';
-    if (cleanPhone) {
-      url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
-    } else {
-      url = `https://api.whatsapp.com/send?text=${encodedText}`;
-    }
-    window.open(url, '_blank');
-    showToast('Открытие WhatsApp... 💬');
-  } else if (messenger === 'telegram') {
-    const tgUrl = `https://t.me/share/url?url=${encodeURIComponent('https://glass-loft.ru')}&text=${encodedText}`;
-    window.open(tgUrl, '_blank');
-    showToast('Открытие Telegram... ✈️');
-  } else if (messenger === 'max') {
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(text).then(() => {
-        showToast('Текст скопирован! Открываем мессенджер MAX... 💬');
-      }).catch(() => {});
-    } else {
-      fallbackCopy(text);
-    }
-    const maxUrl = cleanPhone ? `https://max.im/chat/${cleanPhone}` : `https://max.im/share?text=${encodedText}`;
-    window.open(maxUrl, '_blank');
-  }
-}
-
 async function sharePDF(isMerged) {
   saveCurrentToHistory(false);
   showToast('Формирование PDF для отправки... ⏳');
@@ -3099,7 +3039,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=4.1').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=4.2').then(reg => {
       reg.update();
     }).catch(() => {});
   }
