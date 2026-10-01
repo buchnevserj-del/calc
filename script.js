@@ -1906,68 +1906,6 @@ function showToast(msg) {
   toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2600);
 }
 
-function getFormattedMessengerText() {
-  const clientName = (el('calcClient') && el('calcClient').value.trim()) || '';
-  const clientAddr = (el('calcAddress') && el('calcAddress').value.trim()) || '';
-  const quoteBody = el('quoteText') ? el('quoteText').textContent.trim() : '';
-
-  let greeting = 'Здравствуйте!';
-  if (clientName && clientName !== 'Частное лицо') {
-    greeting = `Здравствуйте, ${clientName}!`;
-  }
-
-  let msg = `${greeting}\n`;
-  msg += `Компания GlassLoft подготовила для Вас расчёт стеклянных конструкций:\n\n`;
-  if (clientAddr && clientAddr !== 'г. Санкт-Петербург') {
-    msg += `📍 Адрес объекта: ${clientAddr}\n\n`;
-  }
-  msg += `${quoteBody}\n\n`;
-  msg += `Будем рады ответить на Ваши вопросы и согласовать дату бесплатного замера!\n`;
-  msg += `📞 8-931-239-23-29 | GlassLoft (Санкт-Петербург, ул. Мурзинская, 11)`;
-  return msg;
-}
-
-function sendToWhatsApp() {
-  saveCurrentToHistory(false);
-  const rawPhone = (el('calcPhone') && el('calcPhone').value.trim()) || '';
-  const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
-  const text = getFormattedMessengerText();
-  const encodedText = encodeURIComponent(text);
-
-  let url = '';
-  if (cleanPhone && cleanPhone.length >= 10) {
-    let finalPhone = cleanPhone;
-    if (finalPhone.length === 11 && finalPhone.startsWith('8')) {
-      finalPhone = '7' + finalPhone.slice(1);
-    } else if (finalPhone.length === 10) {
-      finalPhone = '7' + finalPhone;
-    }
-    url = `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodedText}`;
-  } else {
-    url = `https://api.whatsapp.com/send?text=${encodedText}`;
-  }
-
-  if (typeof window !== 'undefined' && typeof window.open === 'function') {
-    window.open(url, '_blank');
-  } else if (typeof window !== 'undefined') {
-    window.location.href = url;
-  }
-  showToast('Открытие WhatsApp... 💬');
-}
-
-function sendToTelegram() {
-  saveCurrentToHistory(false);
-  const text = getFormattedMessengerText();
-  const encodedText = encodeURIComponent(text);
-  const url = `https://t.me/share/url?url=&text=${encodedText}`;
-  if (typeof window !== 'undefined' && typeof window.open === 'function') {
-    window.open(url, '_blank');
-  } else if (typeof window !== 'undefined') {
-    window.location.href = url;
-  }
-  showToast('Открытие Telegram... ✈️');
-}
-
 function copyQuote() {
   saveCurrentToHistory(false);
   const text = el('quoteText').textContent;
@@ -1977,6 +1915,66 @@ function copyQuote() {
       .catch(() => fallbackCopy(text));
   } else {
     fallbackCopy(text);
+  }
+}
+
+/* --- Messenger 1-Click Send System (WhatsApp, Telegram, MAX) --- */
+function getPoliteMessengerMessage() {
+  const clientVal = (el('calcClient') && el('calcClient').value.trim()) || 'Заказчик';
+  const addressVal = (el('calcAddress') && el('calcAddress').value.trim()) || 'г. Санкт-Петербург';
+  const quoteText = (el('quoteText') && el('quoteText').textContent.trim()) || '';
+  
+  let msg = `Здравствуйте${clientVal && clientVal !== 'Частное лицо' ? ', ' + clientVal : ''}!\n\n`;
+  msg += `Компания GlassLoft подготовила расчёт по вашему проекту:\n`;
+  msg += `📍 Объект: ${addressVal}\n\n`;
+  msg += `${quoteText}\n\n`;
+  msg += `Будем рады ответить на ваши вопросы и согласовать выезд инженера на замер!\n\n`;
+  msg += `С уважением, GlassLoft\n`;
+  msg += `📞 8-931-239-23-29 | 8-950-222-28-82\n`;
+  msg += `🌐 https://glass-loft.ru`;
+  
+  return msg;
+}
+
+function cleanPhoneForMessenger(phoneStr) {
+  if (!phoneStr) return '';
+  let digits = String(phoneStr).replace(/\D/g, '');
+  if (digits.startsWith('8') && digits.length === 11) {
+    digits = '7' + digits.slice(1);
+  }
+  return digits;
+}
+
+function sendToMessenger(messenger) {
+  saveCurrentToHistory(false);
+  const rawPhone = (el('calcPhone') && el('calcPhone').value.trim()) || '';
+  const cleanPhone = cleanPhoneForMessenger(rawPhone);
+  const text = getPoliteMessengerMessage();
+  const encodedText = encodeURIComponent(text);
+
+  if (messenger === 'whatsapp') {
+    let url = '';
+    if (cleanPhone) {
+      url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
+    } else {
+      url = `https://api.whatsapp.com/send?text=${encodedText}`;
+    }
+    window.open(url, '_blank');
+    showToast('Открытие WhatsApp... 💬');
+  } else if (messenger === 'telegram') {
+    const tgUrl = `https://t.me/share/url?url=${encodeURIComponent('https://glass-loft.ru')}&text=${encodedText}`;
+    window.open(tgUrl, '_blank');
+    showToast('Открытие Telegram... ✈️');
+  } else if (messenger === 'max') {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Текст скопирован! Открываем мессенджер MAX... 💬');
+      }).catch(() => {});
+    } else {
+      fallbackCopy(text);
+    }
+    const maxUrl = cleanPhone ? `https://max.im/chat/${cleanPhone}` : `https://max.im/share?text=${encodedText}`;
+    window.open(maxUrl, '_blank');
   }
 }
 
@@ -2263,13 +2261,13 @@ function saveCurrentToHistory(isManual = false) {
       existing.productsSummary = productsSummary;
       existing.appState = JSON.parse(JSON.stringify(appState));
       existing.extraData = {
+        phone: phoneVal,
         delOn: el('delOn') ? el('delOn').checked : true,
         delPrice: el('delPrice') ? el('delPrice').value : 7500,
         adjMode: adjMode,
         adjPercent: el('adjPercent') ? el('adjPercent').value : '',
         termManual: termManual,
         termDays: el('termDays') ? el('termDays').value : '',
-        clientPhone: phoneVal,
         services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
       };
       saveHistoryList(history);
@@ -2284,19 +2282,19 @@ function saveCurrentToHistory(isManual = false) {
     const top = history[0];
     if (top.client === clientVal && top.address === addressVal && (Date.now() - top.timestamp < 300000)) {
       top.total = total;
+      top.phone = phoneVal;
       top.totalFormatted = rub(total);
       top.dateFormatted = dateFormatted;
-      top.phone = phoneVal;
       top.productsSummary = productsSummary;
       top.appState = JSON.parse(JSON.stringify(appState));
       top.extraData = {
+        phone: phoneVal,
         delOn: el('delOn') ? el('delOn').checked : true,
         delPrice: el('delPrice') ? el('delPrice').value : 7500,
         adjMode: adjMode,
         adjPercent: el('adjPercent') ? el('adjPercent').value : '',
         termManual: termManual,
         termDays: el('termDays') ? el('termDays').value : '',
-        clientPhone: phoneVal,
         services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
       };
       saveHistoryList(history);
@@ -2322,13 +2320,13 @@ function saveCurrentToHistory(isManual = false) {
     productsSummary,
     appState: JSON.parse(JSON.stringify(appState)),
     extraData: {
+      phone: phoneVal,
       delOn: el('delOn') ? el('delOn').checked : true,
       delPrice: el('delPrice') ? el('delPrice').value : 7500,
       adjMode: adjMode,
       adjPercent: el('adjPercent') ? el('adjPercent').value : '',
       termManual: termManual,
       termDays: el('termDays') ? el('termDays').value : '',
-      clientPhone: phoneVal,
       services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
     }
   };
@@ -2537,7 +2535,7 @@ function restoreCalculationData(item) {
   }
   
   if (el('calcClient')) el('calcClient').value = item.client || 'Частное лицо';
-  if (el('calcPhone')) el('calcPhone').value = item.phone || (item.extraData && item.extraData.clientPhone) || '';
+  if (el('calcPhone')) el('calcPhone').value = item.phone || (item.extraData && item.extraData.phone) || '';
   if (el('calcAddress')) el('calcAddress').value = item.address || 'г. Санкт-Петербург';
 
   if (item.extraData) {
