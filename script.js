@@ -1906,6 +1906,68 @@ function showToast(msg) {
   toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2600);
 }
 
+function getFormattedMessengerText() {
+  const clientName = (el('calcClient') && el('calcClient').value.trim()) || '';
+  const clientAddr = (el('calcAddress') && el('calcAddress').value.trim()) || '';
+  const quoteBody = el('quoteText') ? el('quoteText').textContent.trim() : '';
+
+  let greeting = 'Здравствуйте!';
+  if (clientName && clientName !== 'Частное лицо') {
+    greeting = `Здравствуйте, ${clientName}!`;
+  }
+
+  let msg = `${greeting}\n`;
+  msg += `Компания GlassLoft подготовила для Вас расчёт стеклянных конструкций:\n\n`;
+  if (clientAddr && clientAddr !== 'г. Санкт-Петербург') {
+    msg += `📍 Адрес объекта: ${clientAddr}\n\n`;
+  }
+  msg += `${quoteBody}\n\n`;
+  msg += `Будем рады ответить на Ваши вопросы и согласовать дату бесплатного замера!\n`;
+  msg += `📞 8-931-239-23-29 | GlassLoft (Санкт-Петербург, ул. Мурзинская, 11)`;
+  return msg;
+}
+
+function sendToWhatsApp() {
+  saveCurrentToHistory(false);
+  const rawPhone = (el('calcPhone') && el('calcPhone').value.trim()) || '';
+  const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+  const text = getFormattedMessengerText();
+  const encodedText = encodeURIComponent(text);
+
+  let url = '';
+  if (cleanPhone && cleanPhone.length >= 10) {
+    let finalPhone = cleanPhone;
+    if (finalPhone.length === 11 && finalPhone.startsWith('8')) {
+      finalPhone = '7' + finalPhone.slice(1);
+    } else if (finalPhone.length === 10) {
+      finalPhone = '7' + finalPhone;
+    }
+    url = `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodedText}`;
+  } else {
+    url = `https://api.whatsapp.com/send?text=${encodedText}`;
+  }
+
+  if (typeof window !== 'undefined' && typeof window.open === 'function') {
+    window.open(url, '_blank');
+  } else if (typeof window !== 'undefined') {
+    window.location.href = url;
+  }
+  showToast('Открытие WhatsApp... 💬');
+}
+
+function sendToTelegram() {
+  saveCurrentToHistory(false);
+  const text = getFormattedMessengerText();
+  const encodedText = encodeURIComponent(text);
+  const url = `https://t.me/share/url?url=&text=${encodedText}`;
+  if (typeof window !== 'undefined' && typeof window.open === 'function') {
+    window.open(url, '_blank');
+  } else if (typeof window !== 'undefined') {
+    window.location.href = url;
+  }
+  showToast('Открытие Telegram... ✈️');
+}
+
 function copyQuote() {
   saveCurrentToHistory(false);
   const text = el('quoteText').textContent;
@@ -2139,6 +2201,7 @@ function migrateHistoryDemoItems() {
 function saveCurrentToHistory(isManual = false) {
   syncCurrentInputsToState();
   const clientVal = (el('calcClient') && el('calcClient').value.trim()) || 'Частное лицо';
+  const phoneVal = (el('calcPhone') && el('calcPhone').value.trim()) || '';
   const addressVal = (el('calcAddress') && el('calcAddress').value.trim()) || 'г. Санкт-Петербург';
   
   const resRailings = calculateCategoryData('railings');
@@ -2190,6 +2253,7 @@ function saveCurrentToHistory(isManual = false) {
     if (existingIdx !== -1) {
       const existing = history[existingIdx];
       existing.client = clientVal;
+      existing.phone = phoneVal;
       existing.address = addressVal;
       existing.title = title;
       existing.total = total;
@@ -2205,6 +2269,7 @@ function saveCurrentToHistory(isManual = false) {
         adjPercent: el('adjPercent') ? el('adjPercent').value : '',
         termManual: termManual,
         termDays: el('termDays') ? el('termDays').value : '',
+        clientPhone: phoneVal,
         services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
       };
       saveHistoryList(history);
@@ -2221,6 +2286,7 @@ function saveCurrentToHistory(isManual = false) {
       top.total = total;
       top.totalFormatted = rub(total);
       top.dateFormatted = dateFormatted;
+      top.phone = phoneVal;
       top.productsSummary = productsSummary;
       top.appState = JSON.parse(JSON.stringify(appState));
       top.extraData = {
@@ -2230,6 +2296,7 @@ function saveCurrentToHistory(isManual = false) {
         adjPercent: el('adjPercent') ? el('adjPercent').value : '',
         termManual: termManual,
         termDays: el('termDays') ? el('termDays').value : '',
+        clientPhone: phoneVal,
         services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
       };
       saveHistoryList(history);
@@ -2246,6 +2313,7 @@ function saveCurrentToHistory(isManual = false) {
     seqNum,
     kpNumber,
     client: clientVal,
+    phone: phoneVal,
     address: addressVal,
     title,
     total,
@@ -2260,6 +2328,7 @@ function saveCurrentToHistory(isManual = false) {
       adjPercent: el('adjPercent') ? el('adjPercent').value : '',
       termManual: termManual,
       termDays: el('termDays') ? el('termDays').value : '',
+      clientPhone: phoneVal,
       services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
     }
   };
@@ -2468,6 +2537,7 @@ function restoreCalculationData(item) {
   }
   
   if (el('calcClient')) el('calcClient').value = item.client || 'Частное лицо';
+  if (el('calcPhone')) el('calcPhone').value = item.phone || (item.extraData && item.extraData.clientPhone) || '';
   if (el('calcAddress')) el('calcAddress').value = item.address || 'г. Санкт-Петербург';
 
   if (item.extraData) {
@@ -2892,6 +2962,7 @@ function resetCalculatorToZero() {
   activeCategory = 'railings';
 
   if (el('calcClient')) el('calcClient').value = 'Частное лицо';
+  if (el('calcPhone')) el('calcPhone').value = '';
   if (el('calcAddress')) el('calcAddress').value = 'г. Санкт-Петербург';
 
   setAdjMode('none');
@@ -3030,7 +3101,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=4.0').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=4.1').then(reg => {
       reg.update();
     }).catch(() => {});
   }

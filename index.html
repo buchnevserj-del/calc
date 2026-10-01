@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.0">
+<link rel="stylesheet" href="style.css?v=4.1">
 </head>
 <body>
 <div class="wrap">
@@ -23,7 +23,7 @@
   <div class="app-top-status-bar">
     <div class="app-status-left">
       <span class="status-dot-pulse"></span>
-      <span>Версия: <b>v4.0.260926</b> (Сборка #52 от 26.09.2026)</span>
+      <span>Версия: <b>v4.1.260926</b> (Сборка #53 от 26.09.2026)</span>
     </div>
     <div class="app-status-right">
       <span class="app-status-link" onclick="forceAppUpdate()" title="Сбросить кэш и загрузить последнюю версию">🔄 Обновить приложение</span>
@@ -212,20 +212,42 @@
           </div>
         </div>
 
-        <!-- Client & Address Quick Inputs -->
-        <div class="grid" style="margin-bottom: 14px;">
+        <!-- Client, Phone & Address Quick Inputs -->
+        <div class="grid grid-client-row" style="margin-bottom: 12px;">
           <div class="field">
             <label>Заказчик</label>
             <div class="input-wrap">
-              <input type="text" id="calcClient" placeholder="Частное лицо / ФИО" value="Частное лицо" oninput="updateKpDocumentData()">
+              <input type="text" id="calcClient" placeholder="Имя / ФИО" value="Частное лицо" oninput="updateKpDocumentData()">
             </div>
           </div>
           <div class="field">
-            <label>Адрес объекта</label>
+            <label>Телефон / WhatsApp</label>
             <div class="input-wrap">
-              <input type="text" id="calcAddress" placeholder="г. Санкт-Петербург" value="г. Санкт-Петербург" oninput="updateKpDocumentData()">
+              <input type="tel" id="calcPhone" placeholder="+7 (___) ___-__-__" oninput="updateKpDocumentData()">
             </div>
           </div>
+        </div>
+        <div class="field" style="margin-bottom: 14px;">
+          <label>Адрес объекта</label>
+          <div class="input-wrap">
+            <input type="text" id="calcAddress" placeholder="г. Санкт-Петербург" value="г. Санкт-Петербург" oninput="updateKpDocumentData()">
+          </div>
+        </div>
+
+        <!-- 1-Click Fast Instant Messenger Sharing (WhatsApp, Telegram, Quote) -->
+        <div class="messenger-actions-row">
+          <button type="button" class="btn b-whatsapp" onclick="sendToWhatsApp()" title="Отправить расчёт в WhatsApp в 1 клик">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24M8.53 7.33c-.16 0-.42.06-.64.3-.22.24-.85.83-.85 2.02s.87 2.35.99 2.51c.12.16 1.7 2.6 4.13 3.65.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.1.47-.07 1.44-.59 1.64-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.47-.28s-1.44-.71-1.66-.79c-.22-.08-.38-.12-.54.12-.16.24-.62.79-.76.95-.14.16-.28.18-.53.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.14-.24-.02-.38.1-.5.11-.11.25-.28.37-.42.12-.14.16-.24.25-.4.08-.16.04-.3-.02-.42s-.54-1.31-.74-1.8c-.2-.47-.4-.41-.55-.41z"/></svg>
+            <span>WhatsApp</span>
+          </button>
+          <button type="button" class="btn b-telegram" onclick="sendToTelegram()" title="Отправить расчёт в Telegram в 1 клик">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+            <span>Telegram</span>
+          </button>
+          <button type="button" class="btn b-teal" onclick="copyQuote()" title="Скопировать текст сметы">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Смета</span>
+          </button>
         </div>
 
         <!-- Fast Official Document Export Row -->
@@ -247,15 +269,11 @@
           <span class="history-count-badge" id="historyCountBadgeRight">0</span>
         </button>
 
-        <!-- Action Buttons: Share & Copy -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-          <button class="btn b-share" style="height:44px;" onclick="initiateShare()">
+        <!-- Action Buttons: Share & PDF -->
+        <div style="margin-bottom:14px;">
+          <button class="btn b-share" style="width:100%;height:44px;" onclick="initiateShare()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-            Поделиться PDF
-          </button>
-          <button class="btn b-teal" style="height:44px;" onclick="copyQuote()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            Скопировать текст
+            Поделиться PDF-файлом
           </button>
         </div>
 
@@ -280,17 +298,16 @@
     <span class="floating-sum" id="floatingSum">0 ₽</span>
   </div>
   <div class="floating-actions">
+    <button class="btn btn-float-whatsapp" onclick="sendToWhatsApp()" title="Отправить расчёт в WhatsApp">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24M8.53 7.33c-.16 0-.42.06-.64.3-.22.24-.85.83-.85 2.02s.87 2.35.99 2.51c.12.16 1.7 2.6 4.13 3.65.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.1.47-.07 1.44-.59 1.64-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.47-.28s-1.44-.71-1.66-.79c-.22-.08-.38-.12-.54.12-.16.24-.62.79-.76.95-.14.16-.28.18-.53.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.14-.24-.02-.38.1-.5.11-.11.25-.28.37-.42.12-.14.16-.24.25-.4.08-.16.04-.3-.02-.42s-.54-1.31-.74-1.8c-.2-.47-.4-.41-.55-.41z"/></svg>
+      <span>WhatsApp</span>
+    </button>
+    <button class="btn btn-float-telegram" onclick="sendToTelegram()" title="Отправить в Telegram">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+    </button>
     <button class="btn btn-float-history" onclick="openModal('historyModal')" title="История расчётов">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-      <span>История</span>
       <span class="history-count-badge" id="historyCountBadgeFloat">0</span>
-    </button>
-    <button class="btn btn-float-share" onclick="initiateShare()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-      Поделиться
-    </button>
-    <button class="btn btn-float-copy" onclick="copyQuote()" title="Скопировать текст">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
     </button>
   </div>
 </div>
@@ -645,6 +662,6 @@
 
 <script src="html2canvas.min.js"></script>
 <script src="jspdf.umd.min.js"></script>
-<script src="script.js?v=4.0"></script>
+<script src="script.js?v=4.1"></script>
 </body>
 </html>
