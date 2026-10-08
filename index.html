@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.2">
+<link rel="stylesheet" href="style.css?v=4.3">
 </head>
 <body>
 <div class="wrap">
@@ -23,7 +23,7 @@
   <div class="app-top-status-bar">
     <div class="app-status-left">
       <span class="status-dot-pulse"></span>
-      <span>Версия: <b>v4.2.260926</b> (Сборка #54 от 26.09.2026)</span>
+      <span>Версия: <b>v4.3.260926</b> (Сборка #55 от 26.09.2026)</span>
     </div>
     <div class="app-status-right">
       <span class="app-status-link" onclick="forceAppUpdate()" title="Сбросить кэш и загрузить последнюю версию">🔄 Обновить приложение</span>
@@ -471,10 +471,15 @@
       <span class="history-capacity-badge" id="historyCapacityBadge">0 / 40 расчётов</span>
     </div>
     <div class="history-header-actions">
-      <button type="button" class="btn ghost btn-sm" onclick="saveCurrentToHistory(true)" title="Сохранить текущий расчёт в историю">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-        <span>Записать текущий</span>
+      <button type="button" class="btn ghost btn-sm" onclick="exportHistoryToFile()" title="Скачать резервную копию всей истории расчётов (.json)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span>Экспорт</span>
       </button>
+      <label class="btn ghost btn-sm" style="cursor:pointer;" title="Восстановить расчёты из резервного файла (.json)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <span>Импорт</span>
+        <input type="file" id="historyFileInput" accept=".json" onchange="importHistoryFromFile(event)" style="display:none;">
+      </label>
       <button type="button" class="btn ghost btn-sm text-danger" onclick="clearAllHistory()" title="Очистить всю историю расчётов">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         <span>Очистить</span>
@@ -645,6 +650,6 @@
 
 <script src="html2canvas.min.js"></script>
 <script src="jspdf.umd.min.js"></script>
-<script src="script.js?v=4.2"></script>
+<script src="script.js?v=4.3"></script>
 </body>
 </html>

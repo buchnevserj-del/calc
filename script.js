@@ -2361,15 +2361,15 @@ function renderHistoryList() {
 
         <div class="history-item-body">
           <div class="history-body-actions">
-            <button type="button" class="btn b-primary btn-sm" onclick="loadCalculationFromHistory('${item.id}')" title="Открыть этот расчёт в калькуляторе для внесения правок">
+            <button type="button" class="btn b-primary btn-sm" onclick="loadCalculationFromHistory('${item.id}', event)" title="Открыть этот расчёт в калькуляторе для внесения правок">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
               <span>Редактировать</span>
             </button>
-            <button type="button" class="btn ghost btn-sm" onclick="duplicateCalculationFromHistory('${item.id}')" title="Создать копию с новым порядковым номером КП">
+            <button type="button" class="btn ghost btn-sm" onclick="duplicateCalculationFromHistory('${item.id}', event)" title="Создать копию с новым порядковым номером КП">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               <span>Копия (Новый №)</span>
             </button>
-            <button type="button" class="btn ghost btn-sm" onclick="copyHistoryQuote('${item.id}')" title="Скопировать смету в буфер обмена">
+            <button type="button" class="btn ghost btn-sm" onclick="copyHistoryQuote('${item.id}', event)" title="Скопировать смету в буфер обмена">
               <span>Смета</span>
             </button>
             <button type="button" class="btn-del-hist" onclick="deleteHistoryItem('${item.id}', event)" title="Удалить этот расчёт из истории">
@@ -2416,10 +2416,70 @@ function executeEditChoice(mode) {
   pendingEditChoiceId = null;
 }
 
-function loadCalculationFromHistory(id) {
+function exportHistoryToFile() {
+  const history = getSavedHistory();
+  if (history.length === 0) {
+    showToast('История пуста, нечего выгружать');
+    return;
+  }
+  const dates = getFormattedDates();
+  const filename = `История_расчетов_GlassLoft_${dates.noDots}.json`;
+  const jsonStr = JSON.stringify(history, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Файл «${filename}» скачан! 📥 (${history.length} расчётов)`);
+}
+
+function importHistoryFromFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (Array.isArray(imported)) {
+        const validItems = imported.filter(item => item && typeof item === 'object' && item.client);
+        if (validItems.length > 0) {
+          const current = getSavedHistory();
+          const existingIds = new Set(current.map(c => c.id));
+          const newItems = validItems.filter(item => !existingIds.has(item.id));
+          const merged = [...newItems, ...current].slice(0, MAX_HISTORY_ITEMS);
+          saveHistoryList(merged);
+          renderHistoryList();
+          showToast(`Успешно импортировано расчётов: ${validItems.length}! 📤`);
+        } else {
+          alert('В файле не найдено корректных расчётов.');
+        }
+      } else {
+        alert('Неверный формат файла истории.');
+      }
+    } catch(err) {
+      alert('Ошибка при чтении файла: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function loadCalculationFromHistory(id, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
   const history = getSavedHistory();
   const item = history.find(h => h.id === id);
-  if (!item) return;
+  if (!item) {
+    showToast('Расчёт не найден в истории');
+    return;
+  }
 
   activeEditingHistoryId = id;
   if (item.seqNum) currentKpSeqNumber = item.seqNum;
@@ -2440,11 +2500,15 @@ function loadCalculationFromHistory(id) {
   showToast(`Расчёт «${item.title || item.client}» открыт для редактирования! ✏️`);
 }
 
-function startEditingHistoryItem(id) {
-  loadCalculationFromHistory(id);
+function startEditingHistoryItem(id, event) {
+  loadCalculationFromHistory(id, event);
 }
 
-async function duplicateCalculationFromHistory(id) {
+async function duplicateCalculationFromHistory(id, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
   const history = getSavedHistory();
   const item = history.find(h => h.id === id);
   if (!item) return;
@@ -2529,7 +2593,10 @@ function cancelActiveEditing() {
 }
 
 function deleteHistoryItem(id, event) {
-  if (event) event.stopPropagation();
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
   let history = getSavedHistory();
   history = history.filter(h => h.id !== id);
   saveHistoryList(history);
@@ -2547,48 +2614,11 @@ function clearAllHistory() {
   }
 }
 
-function copyHistoryQuote(id) {
-  const history = getSavedHistory();
-  const item = history.find(h => h.id === id);
-  if (!item) return;
-  
-  let t = `Коммерческое предложение:\n«${item.title || item.client}»\n\n`;
-  t += `Заказчик: ${item.client || 'Частное лицо'}\n`;
-  t += `Адрес: ${item.address || 'г. Санкт-Петербург'}\n`;
-  t += `Дата: ${item.dateFormatted || ''}\n`;
-  t += `Номер документа: ${item.kpNumber || ''}\n`;
-  if (item.productsSummary && item.productsSummary.length) {
-    t += `Состав: ${item.productsSummary.join(', ')}\n`;
+function copyHistoryQuote(id, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
   }
-  t += `\nИтоговая стоимость: ${item.totalFormatted || rub(item.total || 0)}\n`;
-  
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(t).then(() => showToast('Текст сметы скопирован! 📋')).catch(() => fallbackCopy(t));
-  } else {
-    fallbackCopy(t);
-  }
-}
-
-function deleteHistoryItem(id, event) {
-  if (event) event.stopPropagation();
-  let history = getSavedHistory();
-  history = history.filter(h => h.id !== id);
-  saveHistoryList(history);
-  renderHistoryList();
-  showToast('Расчёт удалён из истории');
-}
-
-function clearAllHistory() {
-  const history = getSavedHistory();
-  if (history.length === 0) return;
-  if (confirm('Вы действительно хотите полностью очистить историю всех расчётов?')) {
-    saveHistoryList([]);
-    renderHistoryList();
-    showToast('История расчётов очищена');
-  }
-}
-
-function copyHistoryQuote(id) {
   const history = getSavedHistory();
   const item = history.find(h => h.id === id);
   if (!item) return;
@@ -3039,7 +3069,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=4.2').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=4.3').then(reg => {
       reg.update();
     }).catch(() => {});
   }
