@@ -1898,14 +1898,23 @@ function updateKpDocumentData(forcedDocNum, isMerged) {
 }
 
 let toastTimer = null;
-function showToast(msg) {
+function showToast(msg, sticky = false) {
   const toast = el('toast');
   const toastMsg = el('toastMsg');
   if (!toast || !toastMsg) { alert(msg); return; }
   toastMsg.textContent = msg;
   toast.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2600);
+  toastTimer = null;
+  if (!sticky) {
+    toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2600);
+  }
+}
+function hideToast() {
+  const toast = el('toast');
+  if (toast) toast.classList.remove('show');
+  clearTimeout(toastTimer);
+  toastTimer = null;
 }
 
 function copyQuote() {
@@ -4074,25 +4083,36 @@ async function finalizePdfImport(rec, okMsg) {
   setTimeout(() => showToast(okMsg), 400);
 }
 
+let pdfImportBusy = false;
+function pdfImportFatal(e) {
+  console.error(e);
+  hideToast();
+  showToast('Ошибка при чтении PDF: ' + (e && e.message ? e.message : 'неизвестная ошибка'));
+}
+
 async function importPdfKp(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
-  if (typeof pdfjsLib === 'undefined') {
-    showToast('PDF модуль не загружен. Откройте страницу с интернетом и повторите.');
-    event.target.value = '';
-    return;
-  }
-
-  showToast('Читаю PDF документ... ⏳');
+  if (pdfImportBusy) { event.target.value = ''; return; }
+  pdfImportBusy = true;
 
   try {
+    if (typeof pdfjsLib === 'undefined') {
+      showToast('PDF модуль не загружен. Проверьте интернет и обновите страницу (Ctrl+Shift+R).');
+      return;
+    }
+
+    showToast('Открываю PDF... ⏳', true);
+
     const arrayBuffer = await file.arrayBuffer();
     const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
     // ---- Шаг 1: извлекаем текст с сохранением построчной структуры ----
     let docText = '';
-    for (let i = 1; i <= doc.numPages; i++) {
+    const pagesToRead = Math.min(doc.numPages, 4);
+    for (let i = 1; i <= pagesToRead; i++) {
+      showToast('Читаю PDF: страница ' + i + ' из ' + pagesToRead + ' 🔎', true);
       const page = await doc.getPage(i);
       const tc = await page.getTextContent();
       const items = tc.items
@@ -4145,34 +4165,35 @@ async function importPdfKp(event) {
       } catch (e) {}
     }
 
+    hideToast();
+
     if (payloadObj) {
       const rec = buildRecordFromPayload(payloadObj);
       await finalizePdfImport(rec, 'Расчёт полностью и точно восстановлен из PDF! 🎯 Теперь можно вносить правки.');
-      event.target.value = '';
       return;
     }
 
     // ---- Шаг 3: текстовый разбор (старые PDF без скрытого блока) ----
     if (!/[а-яА-Яa-zA-Z]/.test(docText)) {
-      showToast('Этот PDF состоит из картинок (скан). Совет: скачайте КП заново кнопкой «PDF» — в новые файлы встроено авто-восстановление.');
-      event.target.value = '';
+      showToast('Этот PDF состоит из картинок (скан). Совет: скачайте КП заново кнопкой «PDF» в калькуляторе — в новые файлы встроено авто-восстановление.');
       return;
     }
 
     const rec = parseKpTextToRecord(docText);
     if (!rec) {
       showToast('Не удалось распознать данные в PDF. Проверьте, что это КП GlassLoft, или восстановите расчёт вручную.');
-      event.target.value = '';
       return;
     }
 
     await finalizePdfImport(rec, 'Смета восстановлена из PDF ' + (rec.totalFormatted ? ('(итог ' + rec.totalFormatted + ') ') : '') + '✏️ Проверьте значения перед отправкой клиенту.');
   } catch (err) {
     console.error(err);
+    hideToast();
     showToast('Ошибка чтения PDF: ' + (err.message || 'файл повреждён или защищён'));
+  } finally {
+    pdfImportBusy = false;
+    event.target.value = '';
   }
-
-  event.target.value = '';
 }
 
 /* --- Init --- */
