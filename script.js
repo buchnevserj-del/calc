@@ -3081,8 +3081,8 @@ function saveAll() {
   saveCurrentToHistory(true);
 }
 
-const APP_VERSION = 'v5.3.091026';
-const APP_BUILD_NUM = '#62';
+const APP_VERSION = 'v5.4.091026';
+const APP_BUILD_NUM = '#63';
 const APP_BUILD_DATE = '09.10.2026';
 
 function updateVersionBadge() {
@@ -3721,7 +3721,8 @@ function b64ToUtf8(b64) {
 
 function parsePdfAmount(s) {
   if (!s) return 0;
-  const v = parseFloat(String(s).replace(/[\s ]/g, '').replace(',', '.'));
+  let t = String(s).replace(/[\s ]/g, '').replace(/[oоО]/g, '0');
+  const v = parseFloat(t.replace(',', '.'));
   return isNaN(v) ? 0 : v;
 }
 
@@ -3846,6 +3847,7 @@ function fmtNum(n) {
 }
 
 // Разбор текстового слоя старого/чужого PDF в запись истории
+// Разбор текстового слоя (или результата OCR) старого/чужого PDF в запись истории
 function parseKpTextToRecord(docText) {
   const lines = docText.split('\n').map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
 
@@ -3853,72 +3855,111 @@ function parseKpTextToRecord(docText) {
   const kpMatch = docText.match(/№\s*([0-9]{1,4})\s*[\/\\]\s*([0-9]{4,10})/);
   const seqFromDoc = kpMatch ? parseInt(kpMatch[1], 10) : 0;
   const dates = getFormattedDates();
-  const dateMatch = docText.match(/\b(\d{2}\.\d{2}\.\d{4})\b/);
+  const dateMatch = docText.match(/\b(\d{2}\s*\.\s*\d{2}\s*\.\s*\d{4})\b/);
 
   // --- Реквизиты: Заказчик / Адрес ---
-  function grabAfterLabel(labelRe, stopRe, validator) {
-    for (let i = 0; i < lines.length; i++) {
-      const l = lines[i];
-      const m = l.match(labelRe);
-      if (!m) continue;
-      let v = (l.slice(m.index + m[0].length) || '').replace(/^[\s:\-–—]+/, '');
-      const c = v.search(stopRe);
-      if (c === 0) v = '';
-      else if (c > 0) v = v.slice(0, c);
-      v = v.replace(/\s{2,}/g, ' ').trim();
-      if (validator(v)) return v;
-      // Пробуем следующую строку (двухколоночная шапка → значения снизу)
-      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
-        let nv = lines[j];
-        if (/^(КОММЕРЧЕСКОЕ|НАИМЕНОВАНИЕ|СТОИМОСТЬ|ИТОГО|ОБЩИЕ|№|\d{1,2}\.\s*[А-ЯЁ]{3,})/i.test(nv)) continue;
-        const c2 = nv.search(stopRe);
-        if (c2 === 0) nv = ''; else if (c2 > 0) nv = nv.slice(0, c2);
-        nv = nv.trim();
-        if (validator(nv)) return nv;
-      }
-      return '';
-    }
-    return '';
+  let address = '';
+  let client = '';
+  const stopRe = /\b(ЗАКАЗЧИК|НАИМЕНОВАНИЕ|СТОИМОСТЬ|КОММЕРЧЕСКОЕ|ИТОГО)\b/i;
+
+  const addrInline = docText.match(/АДРЕС(?:\s+ОБЪЕКТА)?\s*[:\-–]\s*([^\n]{5,120})/i);
+  if (addrInline) {
+    let v = addrInline[1];
+    const c = v.search(stopRe);
+    if (c > 0) v = v.slice(0, c); else if (c === 0) v = '';
+    v = v.replace(/[\s,]+$/, '').trim();
+    if (v.length >= 5 && /[а-яА-ЯёЁ]/.test(v)) address = v;
   }
-  let address = grabAfterLabel(/АДРЕС(?:\s+ОБЪЕКТА)?/i, /\b(ЗАКАЗЧИК|НАИМЕНОВАНИЕ)\b/i,
-    v => v.length >= 5 && /[а-яА-ЯёЁ]/.test(v) && /(\d|\bг\. |город|ул\. |улица|пр\. |проспект|пр-д|пер\. |шоссе|наб\. )/i.test(v));
+  const clientInline = docText.match(/ЗАКАЗЧИК\s*[:\-–]\s*([^\n]{3,80})/i);
+  if (clientInline) {
+    let v = clientInline[1];
+    const c = v.search(stopRe);
+    if (c > 0) v = v.slice(0, c); else if (c === 0) v = '';
+    v = v.replace(/[\s,]+$/, '').trim();
+    if (v.length >= 3 && /^[А-ЯЁа-яё][А-ЯЁа-яё\s\-\.]{2,78}$/.test(v) && !/огражден|перегород|душев|лофт|стекл|издели|наименован/i.test(v)) client = v;
+  }
+
+  // Строка под шапкой «АДРЕС ОБЪЕКТА ЗАКАЗЧИК» — там могут быть адрес и ФИО вместе
+  const hdrIdx = lines.findIndex(l => /АДРЕС\s+ОБЪЕКТА/i.test(l) || (address === '' && /ЗАКАЗЧИК/i.test(l)));
+  if (hdrIdx !== -1 && (!address || !client)) {
+    for (let j = hdrIdx + 1; j < Math.min(hdrIdx + 3, lines.length); j++) {
+      const next = lines[j];
+      if (!next || /^(КОММЕРЧЕСКОЕ|НАИМЕНОВАНИЕ|СТОИМОСТЬ|ИТОГО|ОБЩИЕ|№|\d{1,2}\.\s*[А-ЯЁ]{3,})/i.test(next)) continue;
+      if (!/[а-яА-ЯёЁ]/.test(next)) continue;
+      // Пытаемся отщепить ФИО справа (1–3 слова с заглавной буквы)
+      const words = next.split(/\s+/).filter(Boolean);
+      while (words.length && /^[-–—.,;:|]+$/.test(words[words.length - 1])) words.pop();
+      const nameWords = [];
+      while (words.length && nameWords.length < 3 && /^[А-ЯЁ][а-яё]{2,}$/.test(words[words.length - 1])) {
+        nameWords.unshift(words.pop());
+      }
+      const addrPart = words.join(' ').replace(/[\s,]+$/, '');
+      const namePart = nameWords.join(' ');
+      const addrLooksOk = addrPart.length >= 4 && /(обл\.?|край|респ|г\.?\s|город|ул\.?|улица|пр\.?|пр-т|проспект|пр-д|пер\.?|переулок|шоссе|наб\.?|пос\.?|дер\.?|д\.|\d)/i.test(addrPart);
+      if (!address && addrLooksOk) address = addrPart;
+      if (!client && namePart.length >= 3) client = namePart;
+      if (!address && !addrLooksOk && next.length >= 5 && /(\d|г\.|ул|пр|пер|шоссе|наб|обл)/i.test(next)) {
+        address = namePart && next.endsWith(namePart) ? addrPart : next;
+        if (!client && namePart) client = namePart;
+      }
+      if (address && client) break;
+      break;
+    }
+  }
   if (!address) address = 'г. Санкт-Петербург';
-  let client = grabAfterLabel(/ЗАКАЗЧИК/i, /\b(АДРЕС|НАИМЕНОВАНИЕ|СТОИМОСТЬ)\b/i,
-    v => v.length >= 3 && /^[А-ЯЁа-яё][А-ЯЁа-яё\s\-\.]{2,80}$/.test(v) && !/огражден|перегород|душев|лофт|стекл|издели|наименован/i.test(v));
   if (!client) client = 'Частное лицо';
 
-  // --- Итоговая сумма ---
-  let totalSum = 0;
-  const itogIdx = docText.search(/ИТОГО/i);
-  if (itogIdx !== -1) {
-    const after = docText.slice(itogIdx, itogIdx + 300);
-    const am = after.match(/([0-9][0-9\s ]*(?:[,.]\d{1,2})?)\s*(?:₽|руб)/);
-    if (am) totalSum = parsePdfAmount(am[1]);
+  // --- Вспомогательное: суммы в хвосте строки (устойчиво к OCR) ---
+  function amountsOf(str) {
+    // Склеиваем разряды «95 000» и оторванный знак валюты «95 000 ₽»
+    str = String(str).replace(/(\d)\s+(\d{3})\b/g, '$1$2').replace(/(\d)\s+(\d{3})\b/g, '$1$2');
+    str = str.replace(/(\d)\s+([₽PРр]|руб\.?)/g, '$1$2');
+    const tokens = str.split(/\s+/).filter(Boolean);
+    const out = [];
+    tokens.forEach(tk => {
+      const mm = tk.match(/^([0-9][0-9\s oоО]{0,13}(?:[,.][0-9oоО]{1,2})?)([₽PРр]\.?|руб\.?)?$/i);
+      if (mm) out.push({ v: parsePdfAmount(mm[1]), hasCur: !!mm[2] });
+    });
+    return out;
   }
-  if (!totalSum) {
-    const all = [...docText.matchAll(/([0-9][0-9\s ]*(?:[,.]\d{1,2})?)\s*(?:₽|руб)/g)].map(m => parsePdfAmount(m[1]));
-    if (all.length) totalSum = Math.max.apply(null, all);
+  function rowTotalFromTokens(str) {
+    const am = amountsOf(str);
+    const withCur = am.filter(a => a.hasCur && a.v > 0);
+    if (withCur.length) return withCur[withCur.length - 1].v;
+    if (am.length >= 2) return am[am.length - 1].v;
+    return 0;
   }
-
-  // --- Таблица позиций ---
   function splitTextRow(line) {
-    const m = line.match(/^(.*?)\s+(компл\.?|усл\.?\s*ед\.?|услуга|шт\.?|м\.?\s*пог\.?|м\.п\.|м2|м²|кв\.?\s*м|поз\.?)\s+(.+)$/i);
+    const m = line.match(/^(.*?)\s+(компл\.?|усл\.?\s*ед\.?|услуга|шт\.?|м\.?\s*пог\.?|м\.п\.|м2|м²|кв\.?\s*м|поз\.?)(?![\w.])\s*[.,]?\s*(.*)$/i);
     if (!m) return null;
     const name = m[1].trim();
     const rest = m[3];
     if (!/[а-яА-ЯёЁ]/.test(name)) return null;
-    const groups = rest.match(/(?:не\s*требу(?:ется|ются))|[0-9]+(?:[\s ][0-9]{3})*(?:[,.][0-9]{1,2})?|[0-9]+(?:[,.][0-9]{1,2})?/gi) || [];
-    let total = 0;
-    if (groups.length >= 2) total = parsePdfAmount(groups[groups.length - 1]);
     const notNeeded = /не\s*требу/i.test(rest);
-    return { name: name, total: total, notNeeded: notNeeded };
+    return { name: name, total: rowTotalFromTokens(rest), notNeeded: notNeeded };
   }
 
+  // --- Итог (может быть зашумлён OCR — берём как резерв) ---
+  let totalSum = 0;
+  let itogCand = 0;
+  const itogIdx = docText.search(/ИТОГО/i);
+  if (itogIdx !== -1) {
+    const after = docText.slice(itogIdx, itogIdx + 350);
+    const am = after.match(/([0-9][0-9\s oоО]{2,20})(?:[₽PРр]|руб)/);
+    if (am) itogCand = parsePdfAmount(am[1]);
+  }
+  if (!itogCand) {
+    const all = [...docText.matchAll(/([0-9][0-9\s oоО]{2,20})(?:[₽PРр]|руб)/g)].map(m => parsePdfAmount(m[1]));
+    if (all.length) itogCand = Math.max.apply(null, all);
+  }
+
+  // --- Таблица позиций ---
   const positions = [];
   const services = [];
   let delivery = null;
   let cur = null;
   let docTitle = 'Восстановлено из PDF';
+  let pendingFill = null; // разрешение дозаписать сумму в предыдущую строку таблицы
 
   function ensurePos() {
     if (!cur) cur = { name: docTitle, glassName: '', glassSum: 0, hardSum: 0, railName: '', railSum: 0, instSum: 0, instOn: false };
@@ -3930,50 +3971,83 @@ function parseKpTextToRecord(docText) {
     if (/НАИМЕНОВАНИЕ\s+ИЗДЕЛИЯ/i.test(line)) {
       for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
         const cand = lines[j];
-        if (cand && !/СТОИМОСТЬ|НАИМЕНОВАНИЕ|ЕД|КОЛ-ВО|ИТОГО|₽|руб/i.test(cand) && /[а-яА-ЯёЁ]/.test(cand)) { docTitle = cand; break; }
+        if (cand && !/СТОИМОСТЬ|НАИМЕНОВАНИЕ|ЕД|КОЛ-ВО|ИТОГО|₽|руб/i.test(cand) && /[а-яА-ЯёЁ]/.test(cand)) {
+          docTitle = cand.split(/\s+стекло\s+/i)[0].trim() || cand;
+          if (docTitle.length > 80) docTitle = docTitle.slice(0, 80).trim();
+          break;
+        }
       }
       continue;
     }
     if (/ОБЩИЕ\s+УСЛУГИ/i.test(line)) {
       if (cur) { positions.push(cur); cur = null; }
+      pendingFill = null;
       continue;
     }
     const sm = line.match(/^(\d{1,2})\.\s*([А-ЯЁA-Z][А-ЯЁA-Z\s\d\-\.,()&№×xX]{2,80})$/);
     if (sm && !/НАИМЕНОВАНИЕ|ИЗДЕЛИЯ|УСЛУГИ/i.test(sm[2])) {
       if (cur) { positions.push(cur); cur = null; }
+      pendingFill = null;
       const low = sm[2].trim().toLowerCase();
       cur = { name: low.charAt(0).toUpperCase() + low.slice(1), glassName: '', glassSum: 0, hardSum: 0, railName: '', railSum: 0, instSum: 0, instOn: false };
       continue;
     }
     const row = splitTextRow(line);
-    if (!row) continue;
+    if (!row) {
+      // Строка только с суммами — дозаписываем в предыдущую незавершённую строку таблицы
+      if (pendingFill && /[₽PРр]|руб/.test(line)) {
+        const v = rowTotalFromTokens(line);
+        if (v > 0) { pendingFill(v); pendingFill = null; }
+      }
+      continue;
+    }
     const nm = row.name.toLowerCase();
     if (/^стекло/.test(nm)) {
       const p = ensurePos();
       p.glassSum = (p.glassSum || 0) + row.total;
       p.glassName = row.name.replace(/^стекло\s*(закал[её]нное)?\s*/i, '').trim();
-    } else if (/комплект\s+фурнитур/.test(nm)) {
+      pendingFill = row.total > 0 ? null : (v => { p.glassSum += v; });
+    } else if (/комплект\s*фурнитур/.test(nm)) {
       const p = ensurePos();
       p.hardSum = (p.hardSum || 0) + row.total;
+      pendingFill = row.total > 0 ? null : (v => { p.hardSum += v; });
     } else if (/^поручень/.test(nm)) {
       const p = ensurePos();
       p.railSum = (p.railSum || 0) + row.total;
       p.railName = row.name.replace(/^поручень\s*[:\-–]?\s*/i, '').trim();
+      pendingFill = row.total > 0 ? null : (v => { p.railSum += v; });
     } else if (/монтажн/.test(nm)) {
       const p = ensurePos();
       p.instSum = (p.instSum || 0) + row.total;
       if (!row.notNeeded && row.total > 0) p.instOn = true;
+      pendingFill = null;
     } else if (/доставка/.test(nm)) {
       delivery = { on: row.total > 0 && !row.notNeeded, price: row.total > 0 ? row.total : D.misc.delivery };
-    } else if (/итого|общая\s+стоимость/i.test(nm)) {
+      pendingFill = null;
+    } else if (/итого|общая\s+стоимость|срок|предоплат/i.test(nm)) {
+      pendingFill = null;
       continue;
     } else {
-      services.push({ name: row.name.replace(/\s+/g, ' ').trim(), sum: row.total });
+      if (row.total > 0) {
+        const sName = row.name.replace(/\s+/g, ' ').trim();
+        if (!services.some(x => x.name.toLowerCase() === sName.toLowerCase() && x.sum === row.total)) {
+          services.push({ name: sName, sum: row.total });
+        }
+      }
+      pendingFill = null;
     }
   }
   if (cur) positions.push(cur);
 
-  // Пустышки не пропускаем
+  // --- Итоговая сумма: приоритет сумме строк (OCR «ИТОГО» шумнее) ---
+  let rowsSum = 0;
+  positions.forEach(p => { rowsSum += (p.glassSum || 0) + (p.hardSum || 0) + (p.railSum || 0) + (p.instSum || 0); });
+  services.forEach(s => { rowsSum += s.sum || 0; });
+  if (delivery && delivery.on) rowsSum += delivery.price || 0;
+
+  if (rowsSum > 0) totalSum = rowsSum;
+  else totalSum = itogCand;
+
   const hasAny = positions.some(p => (p.glassSum + p.hardSum + p.railSum + p.instSum) > 0);
   if (!hasAny && services.length === 0 && !delivery && totalSum === 0) return null;
   if (!hasAny && totalSum > 0) {
@@ -4018,7 +4092,7 @@ function parseKpTextToRecord(docText) {
     productNames.push(pos.name);
   });
 
-  // --- Услуги ---
+  // --- Услуги (с мягким сопоставлением названий после OCR) ---
   const extraData = {
     phone: '',
     delOn: delivery ? delivery.on : true,
@@ -4030,9 +4104,26 @@ function parseKpTextToRecord(docText) {
     services: []
   };
 
+  function normName(s) { return String(s || '').toLowerCase().replace(/[^а-яa-z0-9]/g, ''); }
+  function findServiceIdx(name) {
+    const n = normName(name);
+    if (!n) return -1;
+    for (let k = 0; k < D.services.length; k++) {
+      const t = normName(D.services[k].name);
+      if (!t) continue;
+      if (t === n) return k;
+      if (n.length >= 10 && t.length >= 10 && (n.includes(t) || t.includes(n))) return k;
+      let pref = 0;
+      const lim = Math.min(n.length, t.length);
+      while (pref < lim && n[pref] === t[pref]) pref++;
+      if (lim >= 10 && pref / lim >= 0.65) return k;
+    }
+    return -1;
+  }
+
   let newServicesAdded = false;
   services.forEach(s => {
-    let idx = D.services.findIndex(x => x.name.trim().toLowerCase() === s.name.trim().toLowerCase());
+    let idx = findServiceIdx(s.name);
     if (idx === -1) {
       D.services.push({ name: s.name.slice(0, 120), emptyDefault: 'hide' });
       idx = D.services.length - 1;
@@ -4048,7 +4139,7 @@ function parseKpTextToRecord(docText) {
   return {
     id: 'calc_pdf_' + Date.now(),
     timestamp: Date.now(),
-    dateFormatted: (dateMatch ? dateMatch[1] : dates.dateStr) + ' (из PDF)',
+    dateFormatted: (dateMatch ? dateMatch[1].replace(/\s/g, '') : dates.dateStr) + ' (из PDF)',
     seqNum: seq,
     kpNumber: kpMatch ? ('№ ' + kpMatch[1] + '/' + kpMatch[2]) : ('№ ' + seq + '/' + dates.noDots),
     client: client,
@@ -4135,6 +4226,66 @@ function onPdfImportClick() {
   inp.value = '';
   showToast('📂 Выберите PDF-файл со сметой GlassLoft');
   try { inp.click(); } catch (e) { showToast('Браузер заблокировал открытие файла: ' + e.message); }
+}
+
+/* --- OCR: распознавание PDF-картинок (сканы / старые PDF-фото) --- */
+let ocrWorkerPromise = null;
+let ocrProgressCb = null;
+
+function ensureTesseractLoaded() {
+  if (window.Tesseract) return Promise.resolve(true);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = './tesseract.min.js';
+    s.onload = () => resolve(!!window.Tesseract);
+    s.onerror = () => reject(new Error('ocr_lib'));
+    document.head.appendChild(s);
+  });
+}
+
+async function getOcrWorker() {
+  if (!ocrWorkerPromise) {
+    ocrWorkerPromise = (async () => {
+      await ensureTesseractLoaded();
+      return Tesseract.createWorker('rus', 1, {
+        workerPath: './tess/worker.min.js',
+        corePath: './tess/',
+        langPath: './tess',
+        cacheMethod: 'refresh',
+        logger: m => { if (ocrProgressCb) ocrProgressCb(m); }
+      });
+    })();
+    ocrWorkerPromise.catch(() => { ocrWorkerPromise = null; });
+  }
+  return ocrWorkerPromise;
+}
+
+async function ocrPdfDocument(doc, onStatus) {
+  const worker = await getOcrWorker();
+  let text = '';
+  const pages = Math.min(doc.numPages, 2);
+  for (let i = 1; i <= pages; i++) {
+    const page = await doc.getPage(i);
+    const viewport = page.getViewport({ scale: 2.2 });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.min(2200, Math.ceil(viewport.width));
+    canvas.height = Math.ceil(canvas.width * viewport.height / viewport.width);
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const vw = page.getViewport({ scale: 2.2 * (canvas.width / viewport.width) });
+    await page.render({ canvasContext: ctx, viewport: vw }).promise;
+    ocrProgressCb = m => {
+      if (m && m.status === 'recognizing text' && typeof m.progress === 'number' && onStatus) {
+        onStatus('Распознаю текст на стр. ' + i + '/' + pages + ': ' + Math.round(m.progress * 100) + '% 🔎');
+      }
+    };
+    const res = await worker.recognize(canvas);
+    text += ((res && res.data && res.data.text) || '') + '\n';
+    canvas.width = 0; canvas.height = 0;
+  }
+  ocrProgressCb = null;
+  return text;
 }
 
 let pdfImportBusy = false;
@@ -4227,10 +4378,24 @@ async function importPdfKp(event) {
       return;
     }
 
-    // ---- Шаг 3: текстовый разбор (старые PDF без скрытого блока) ----
+    // ---- Шаг 3: текстового слоя нет → распознаём через OCR ----
     if (!/[а-яА-Яa-zA-Z]/.test(docText)) {
-      showToast('Этот PDF состоит из картинок (скан). Совет: скачайте КП заново кнопкой «PDF» в калькуляторе — в новые файлы встроено авто-восстановление.');
-      return;
+      showToast('Это PDF-фото без текста. Включаю распознавание (OCR), первый раз подгрузится модуль ~8 МБ... ⏳', true);
+      try {
+        const ocrText = await ocrPdfDocument(doc, st => showToast(st, true));
+        hideToast();
+        if (ocrText && /[а-яА-Яa-zA-Z]/.test(ocrText)) {
+          docText = ocrText;
+        } else {
+          alert('Этот PDF — изображение, и текст распознать не удалось.\n\nСовет: сформируйте КП заново в калькуляторе (кнопка «PDF») — восстановление новых файлов мгновенное и точное.');
+          return;
+        }
+      } catch (ocrErr) {
+        hideToast();
+        console.error(ocrErr);
+        alert('Этот PDF — изображение. Для распознавания нужен интернет (один раз, подгрузка модуля ~8 МБ).\nПроверьте соединение и попробуйте ещё раз.');
+        return;
+      }
     }
 
     const rec = parseKpTextToRecord(docText);
