@@ -3303,17 +3303,42 @@ function saveCloudSettings() {
 }
 
 // Normalized Endpoint Builder for Provider
+function normalizeSupabaseUrl(raw) {
+  if (!raw) return '';
+  raw = raw.trim();
+  // 1. If user pasted dashboard URL like https://supabase.com/dashboard/project/xyzabc/settings/api
+  const dashMatch = raw.match(/dashboard\/project\/([a-zA-Z0-9_-]+)/);
+  if (dashMatch) {
+    return `https://${dashMatch[1]}.supabase.co`;
+  }
+  // 2. If user pasted just project reference ID
+  if (!raw.includes('.') && !raw.includes('/')) {
+    return `https://${raw}.supabase.co`;
+  }
+  // 3. Ensure https://
+  if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
+    raw = 'https://' + raw;
+  }
+  // 4. Strip extra path suffixes like /rest/v1 or /history
+  raw = raw.replace(/\/+$/, '');
+  raw = raw.replace(/\/rest\/v1(\/history)?$/i, '');
+  raw = raw.replace(/\/rest\/v1\/?$/i, '');
+  raw = raw.replace(/\/+$/, '');
+  return raw;
+}
+
+// Normalized Endpoint Builder for Provider
 function getActiveCloudEndpointInfo() {
   const cfg = getCloudConfig();
   if (cfg.provider === 'firebase') {
-    let raw = cfg.fbUrl.trim();
+    let raw = (cfg.fbUrl || '').trim();
     if (!raw) return null;
     raw = raw.replace(/\/+$/, '');
     if (!raw.endsWith('.json')) {
       raw += '/glassloft/history.json';
     }
     if (cfg.fbApiKey) {
-      raw += (raw.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(cfg.fbApiKey);
+      raw += (raw.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(cfg.fbApiKey.trim());
     }
     return {
       provider: 'firebase',
@@ -3321,22 +3346,23 @@ function getActiveCloudEndpointInfo() {
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     };
   } else if (cfg.provider === 'supabase') {
-    let raw = cfg.sbUrl.trim().replace(/\/+$/, '');
-    if (!raw) return null;
-    const url = `${raw}/rest/v1/history`;
+    let baseUrl = normalizeSupabaseUrl(cfg.sbUrl);
+    if (!baseUrl) return null;
+    const key = (cfg.sbApiKey || '').trim();
+    const url = `${baseUrl}/rest/v1/history`;
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'apikey': cfg.sbApiKey || '',
-      'Authorization': `Bearer ${cfg.sbApiKey || ''}`,
-      'Prefer': 'return=representation'
+      'apikey': key,
+      'Authorization': `Bearer ${key}`,
+      'Prefer': 'resolution=merge-duplicates'
     };
-    return { provider: 'supabase', url, headers };
+    return { provider: 'supabase', url, headers, baseUrl };
   } else {
-    let raw = cfg.customUrl.trim();
+    let raw = (cfg.customUrl || '').trim();
     if (!raw) return null;
     const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-    if (cfg.customApiKey) headers['X-Api-Key'] = cfg.customApiKey;
+    if (cfg.customApiKey) headers['X-Api-Key'] = cfg.customApiKey.trim();
     return { provider: 'custom', url: raw, headers };
   }
 }
@@ -3349,7 +3375,7 @@ async function testCloudConnection() {
     if (resBox) {
       resBox.className = 'yc-test-result error';
       resBox.style.display = 'block';
-      resBox.textContent = '⚠️ Введите URL базы данных или проекта';
+      resBox.textContent = '⚠️ Пожалуйста, введите URL проекта Supabase и anon public API ключ';
     }
     return false;
   }
@@ -3364,7 +3390,7 @@ async function testCloudConnection() {
   try {
     let fetchUrl = info.url;
     if (info.provider === 'supabase') {
-      fetchUrl += '?select=*&limit=50';
+      fetchUrl += '?select=id,timestamp&limit=50';
     }
 
     const res = await fetch(fetchUrl, {
@@ -3380,8 +3406,19 @@ async function testCloudConnection() {
       let msg = `Ошибка HTTP ${res.status}`;
       try {
         const parsed = JSON.parse(errText);
-        if (parsed.error || parsed.message) msg += `: ${parsed.error || parsed.message}`;
-      } catch(e) {}
+        if (parsed.message) msg += `: ${parsed.message}`;
+        else if (parsed.error) msg += `: ${parsed.error}`;
+        else if (parsed.hint) msg += ` (${parsed.hint})`;
+      } catch(e) {
+        if (errText && errText.length < 150) msg += `: ${errText}`;
+      }
+
+      if (res.status === 404) {
+        msg += '<br><br>💡 <b>Как исправить:</b> Убедитесь, что в поле <b>Project URL</b> указана ссылка вида <code>https://xxxxxxxx.supabase.co</code> (из раздела Project Settings -> API), а не ссылка из адресной строки браузера!';
+      } else if (res.status === 401 || res.status === 403) {
+        msg += '<br><br>💡 <b>Как исправить:</b> Проверьте поле <b>anon public API key</b> в разделе Project Settings -> API.';
+      }
+
       if (resBox) {
         resBox.className = 'yc-test-result error';
         resBox.innerHTML = `❌ ${msg} (${elapsed} мс)`;
@@ -3399,7 +3436,7 @@ async function testCloudConnection() {
 
     if (resBox) {
       resBox.className = 'yc-test-result success';
-      resBox.innerHTML = `✅ Успешное подключение! Время отклика: ${elapsed} мс.<br>В облачной базе найдено расчётов: <b>${count}</b>`;
+      resBox.innerHTML = `✅ <b>Успешное подключение к Supabase!</b> Время отклика: ${elapsed} мс.<br>В таблице <code>history</code> найдено смет: <b>${count}</b>`;
     }
     return true;
   } catch(err) {
@@ -3455,7 +3492,7 @@ async function syncCloudData(silent = false) {
     // 2. Local List
     const localList = getSavedHistory();
 
-    // 3. Smart Merge
+    // 3. Smart Merge by ID and timestamp
     const mergedMap = new Map();
     localList.forEach(item => {
       if (item && item.id) mergedMap.set(item.id, item);
@@ -3494,11 +3531,17 @@ async function syncCloudData(silent = false) {
         body: JSON.stringify(finalMerged)
       });
     } else if (info.provider === 'supabase') {
-      for (const item of finalMerged) {
+      // Bulk upsert in 1 request
+      const payload = finalMerged.map(item => ({
+        id: item.id,
+        data: item,
+        timestamp: item.timestamp || Date.now()
+      }));
+      if (payload.length > 0) {
         await fetch(info.url, {
           method: 'POST',
-          headers: Object.assign({}, info.headers, { 'Prefer': 'resolution=merge-duplicates' }),
-          body: JSON.stringify({ id: item.id, data: item, timestamp: item.timestamp || Date.now() })
+          headers: info.headers,
+          body: JSON.stringify(payload)
         });
       }
     } else {
@@ -3576,12 +3619,18 @@ async function pushToCloudDirect() {
       const res = await fetch(info.url, { method: 'PUT', headers: info.headers, body: JSON.stringify(localItems) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } else if (info.provider === 'supabase') {
-      for (const item of localItems) {
-        await fetch(info.url, {
+      const payload = localItems.map(item => ({
+        id: item.id,
+        data: item,
+        timestamp: item.timestamp || Date.now()
+      }));
+      if (payload.length > 0) {
+        const res = await fetch(info.url, {
           method: 'POST',
-          headers: Object.assign({}, info.headers, { 'Prefer': 'resolution=merge-duplicates' }),
-          body: JSON.stringify({ id: item.id, data: item, timestamp: item.timestamp || Date.now() })
+          headers: info.headers,
+          body: JSON.stringify(payload)
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
       }
     } else {
       const res = await fetch(info.url, { method: 'POST', headers: info.headers, body: JSON.stringify(localItems) });
