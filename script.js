@@ -2065,11 +2065,19 @@ function getSavedHistory() {
   return [];
 }
 
-function saveHistoryList(list) {
+function saveHistoryList(list, skipSync = false) {
   try {
     localStorage.setItem('glassloft_calc_history_v1', JSON.stringify(list.slice(0, MAX_HISTORY_ITEMS)));
   } catch(e) {}
   updateHistoryBadge();
+  if (!skipSync) {
+    try {
+      const cfg = getYandexCloudConfig();
+      if (cfg.endpoint && cfg.autoSync) {
+        syncYandexCloud(true);
+      }
+    } catch(e) {}
+  }
 }
 
 function updateHistoryBadge() {
@@ -3067,6 +3075,387 @@ async function forceAppUpdate() {
   }, 250);
 }
 
+
+/* ==========================================================================
+   Yandex Cloud Synchronization Module (Yandex Cloud Functions / Object Storage)
+   ========================================================================== */
+
+const YC_CONFIG_KEY = 'glassloft_yc_sync_config_v1';
+let isYcSyncing = false;
+
+function getYandexCloudConfig() {
+  try {
+    const raw = localStorage.getItem(YC_CONFIG_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          endpoint: parsed.endpoint || '',
+          apiKey: parsed.apiKey || '',
+          autoSync: parsed.autoSync !== false,
+          autoFetch: parsed.autoFetch !== false,
+          lastSyncTime: parsed.lastSyncTime || null,
+          lastStatus: parsed.lastStatus || 'idle',
+          lastError: parsed.lastError || null
+        };
+      }
+    }
+  } catch(e) {}
+  return {
+    endpoint: '',
+    apiKey: '',
+    autoSync: true,
+    autoFetch: true,
+    lastSyncTime: null,
+    lastStatus: 'idle',
+    lastError: null
+  };
+}
+
+function setYandexCloudConfig(cfg) {
+  try {
+    const current = getYandexCloudConfig();
+    const updated = Object.assign({}, current, cfg);
+    localStorage.setItem(YC_CONFIG_KEY, JSON.stringify(updated));
+  } catch(e) {}
+  updateYandexCloudStatusBar();
+}
+
+function updateYandexCloudStatusBar() {
+  const dot = el('ycStatusDot');
+  const title = el('ycStatusTitle');
+  const sub = el('ycStatusSub');
+  const syncBtn = el('ycSyncNowBtn');
+  const cfg = getYandexCloudConfig();
+
+  if (!dot || !title || !sub) return;
+
+  dot.className = 'yc-status-dot';
+  if (syncBtn) syncBtn.classList.remove('loading');
+
+  if (isYcSyncing) {
+    dot.classList.add('syncing');
+    if (syncBtn) syncBtn.classList.add('loading');
+    title.innerHTML = '☁️ Яндекс Облако: Синхронизация...';
+    sub.textContent = 'Объединение смет с облачной базой данных...';
+    return;
+  }
+
+  if (!cfg.endpoint) {
+    dot.classList.remove('connected', 'error', 'syncing');
+    title.innerHTML = '☁️ Яндекс Облако: Локальный режим';
+    sub.textContent = 'Нажмите «Настройки», чтобы включить синхронизацию между всеми устройствами';
+    return;
+  }
+
+  if (cfg.lastStatus === 'error') {
+    dot.classList.add('error');
+    title.innerHTML = '☁️ Яндекс Облако: Ошибка связи';
+    sub.textContent = cfg.lastError ? `Ошибка: ${cfg.lastError} (данные сохранены локально)` : 'Проверьте подключение к интернету или URL функции';
+    return;
+  }
+
+  dot.classList.add('connected');
+  title.innerHTML = '🟢 Яндекс Облако: Синхронизировано';
+  if (cfg.lastSyncTime) {
+    const d = new Date(cfg.lastSyncTime);
+    const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const dateStr = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+    sub.textContent = `База актуальна (последняя синхронизация: ${dateStr} в ${timeStr})`;
+  } else {
+    sub.textContent = 'Подключено к облачной базе смет GlassLoft';
+  }
+}
+
+function openYandexCloudSettingsModal() {
+  const cfg = getYandexCloudConfig();
+  if (el('ycEndpointInput')) el('ycEndpointInput').value = cfg.endpoint;
+  if (el('ycApiKeyInput')) el('ycApiKeyInput').value = cfg.apiKey;
+  if (el('ycAutoSyncToggle')) el('ycAutoSyncToggle').checked = cfg.autoSync !== false;
+  if (el('ycAutoFetchToggle')) el('ycAutoFetchToggle').checked = cfg.autoFetch !== false;
+  const resBox = el('ycTestResult');
+  if (resBox) {
+    resBox.style.display = 'none';
+    resBox.innerHTML = '';
+  }
+  openModal('yandexCloudSettingsModal');
+}
+
+function toggleYcGuide() {
+  const body = el('ycGuideBody');
+  const arrow = el('ycGuideArrow');
+  if (!body) return;
+  if (body.style.display === 'none' || !body.style.display) {
+    body.style.display = 'block';
+    if (arrow) arrow.textContent = '▲';
+  } else {
+    body.style.display = 'none';
+    if (arrow) arrow.textContent = '▼';
+  }
+}
+
+function saveYandexCloudSettings() {
+  const endpoint = (el('ycEndpointInput') && el('ycEndpointInput').value.trim()) || '';
+  const apiKey = (el('ycApiKeyInput') && el('ycApiKeyInput').value.trim()) || '';
+  const autoSync = el('ycAutoSyncToggle') ? el('ycAutoSyncToggle').checked : true;
+  const autoFetch = el('ycAutoFetchToggle') ? el('ycAutoFetchToggle').checked : true;
+
+  setYandexCloudConfig({
+    endpoint: endpoint,
+    apiKey: apiKey,
+    autoSync: autoSync,
+    autoFetch: autoFetch,
+    lastStatus: endpoint ? 'idle' : 'idle',
+    lastError: null
+  });
+
+  closeModal('yandexCloudSettingsModal');
+  showToast('Настройки Яндекс Облака сохранены');
+
+  if (endpoint) {
+    syncYandexCloud(false);
+  }
+}
+
+async function testYandexCloudConnection() {
+  const endpoint = (el('ycEndpointInput') && el('ycEndpointInput').value.trim()) || '';
+  const apiKey = (el('ycApiKeyInput') && el('ycApiKeyInput').value.trim()) || '';
+  const resBox = el('ycTestResult');
+
+  if (!endpoint) {
+    if (resBox) {
+      resBox.className = 'yc-test-result error';
+      resBox.style.display = 'block';
+      resBox.textContent = '⚠️ Введите URL функции или шлюза Яндекс Облака';
+    }
+    return;
+  }
+
+  if (resBox) {
+    resBox.className = 'yc-test-result info';
+    resBox.style.display = 'block';
+    resBox.innerHTML = '⏳ Проверка связи с Яндекс Облаком...';
+  }
+
+  const startTime = Date.now();
+  try {
+    const headers = { 'Accept': 'application/json' };
+    if (apiKey) headers['X-Api-Key'] = apiKey;
+
+    const res = await fetch(endpoint, {
+      method: 'GET',
+      headers: headers,
+      cache: 'no-store'
+    });
+
+    const elapsed = Date.now() - startTime;
+
+    if (!res.ok) {
+      const errText = await res.text();
+      let msg = `Ошибка HTTP ${res.status}`;
+      try {
+        const parsed = JSON.parse(errText);
+        if (parsed.error) msg += `: ${parsed.error}`;
+      } catch(e) {}
+      if (resBox) {
+        resBox.className = 'yc-test-result error';
+        resBox.innerHTML = `❌ ${msg} (${elapsed} мс)`;
+      }
+      return false;
+    }
+
+    const data = await res.json();
+    const count = Array.isArray(data) ? data.length : (data.count !== undefined ? data.count : (Array.isArray(data.items) ? data.items.length : 0));
+    if (resBox) {
+      resBox.className = 'yc-test-result success';
+      resBox.innerHTML = `✅ Связь с Яндекс Облаком установлена! Время отклика: ${elapsed} мс.<br>В облачной базе найдено расчётов: <b>${count}</b>`;
+    }
+    return true;
+  } catch(err) {
+    const elapsed = Date.now() - startTime;
+    if (resBox) {
+      resBox.className = 'yc-test-result error';
+      resBox.innerHTML = `❌ Не удалось связаться с сервером (${elapsed} мс): ${err.message || 'Сетевая ошибка или CORS'}`;
+    }
+    return false;
+  }
+}
+
+// Smart 2-Way Synchronization Engine
+async function syncYandexCloud(silent = false) {
+  const cfg = getYandexCloudConfig();
+  if (!cfg.endpoint) {
+    if (!silent) openYandexCloudSettingsModal();
+    return;
+  }
+
+  if (isYcSyncing) return;
+  isYcSyncing = true;
+  updateYandexCloudStatusBar();
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    if (cfg.apiKey) headers['X-Api-Key'] = cfg.apiKey;
+
+    // 1. GET remote history
+    const getRes = await fetch(cfg.endpoint, {
+      method: 'GET',
+      headers: headers,
+      cache: 'no-store'
+    });
+
+    if (!getRes.ok) {
+      throw new Error(`Ошибка HTTP ${getRes.status}`);
+    }
+
+    const remoteData = await getRes.json();
+    const remoteList = Array.isArray(remoteData) ? remoteData : (remoteData.items || []);
+
+    // 2. Local history
+    const localList = getSavedHistory();
+
+    // 3. Smart 2-Way Merge by ID and timestamp
+    const mergedMap = new Map();
+
+    localList.forEach(item => {
+      if (item && item.id) {
+        mergedMap.set(item.id, item);
+      }
+    });
+
+    let newFromRemoteCount = 0;
+    remoteList.forEach(remItem => {
+      if (!remItem || !remItem.id) return;
+      if (mergedMap.has(remItem.id)) {
+        const loc = mergedMap.get(remItem.id);
+        const locTime = loc.updatedAt || loc.timestamp || 0;
+        const remTime = remItem.updatedAt || remItem.timestamp || 0;
+        if (remTime > locTime) {
+          mergedMap.set(remItem.id, remItem);
+        }
+      } else {
+        mergedMap.set(remItem.id, remItem);
+        newFromRemoteCount++;
+      }
+    });
+
+    const finalMerged = Array.from(mergedMap.values())
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+      .slice(0, MAX_HISTORY_ITEMS);
+
+    // Save to local storage without triggering recursive sync
+    try {
+      localStorage.setItem('glassloft_calc_history_v1', JSON.stringify(finalMerged));
+    } catch(e) {}
+    updateHistoryBadge();
+    renderHistoryList();
+
+    // 4. PUT / POST merged list back to Yandex Cloud
+    try {
+      const postRes = await fetch(cfg.endpoint, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(finalMerged)
+      });
+      if (!postRes.ok) {
+        await fetch(cfg.endpoint, {
+          method: 'PUT',
+          headers: headers,
+          body: JSON.stringify(finalMerged)
+        });
+      }
+    } catch(e) {}
+
+    setYandexCloudConfig({
+      lastSyncTime: Date.now(),
+      lastStatus: 'success',
+      lastError: null
+    });
+
+    if (!silent) {
+      showToast(`Синхронизировано: ${finalMerged.length} смет в общей базе`);
+    }
+  } catch(err) {
+    setYandexCloudConfig({
+      lastStatus: 'error',
+      lastError: err.message || 'Ошибка сети'
+    });
+    if (!silent) {
+      showToast(`Ошибка синхронизации: ${err.message || 'Сетевая ошибка'}`);
+    }
+  } finally {
+    isYcSyncing = false;
+    updateYandexCloudStatusBar();
+  }
+}
+
+// Direct Pull from Cloud
+async function pullFromYandexCloudDirect() {
+  const cfg = getYandexCloudConfig();
+  if (!cfg.endpoint) {
+    showToast('Сначала укажите URL функции Яндекс Облака');
+    return;
+  }
+  try {
+    const headers = { 'Accept': 'application/json' };
+    if (cfg.apiKey) headers['X-Api-Key'] = cfg.apiKey;
+
+    const res = await fetch(cfg.endpoint, { method: 'GET', headers: headers, cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : (data.items || []);
+    if (items.length === 0) {
+      showToast('В облаке пока нет сохранённых расчётов');
+      return;
+    }
+    saveHistoryList(items, true);
+    renderHistoryList();
+    closeModal('yandexCloudSettingsModal');
+    showToast(`Загружено ${items.length} расчётов из Яндекс Облака`);
+  } catch(err) {
+    showToast(`Ошибка: ${err.message}`);
+  }
+}
+
+// Direct Push to Cloud
+async function pushToYandexCloudDirect() {
+  const cfg = getYandexCloudConfig();
+  if (!cfg.endpoint) {
+    showToast('Сначала укажите URL функции Яндекс Облака');
+    return;
+  }
+  const localItems = getSavedHistory();
+  try {
+    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+    if (cfg.apiKey) headers['X-Api-Key'] = cfg.apiKey;
+
+    const res = await fetch(cfg.endpoint, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(localItems)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    setYandexCloudConfig({ lastSyncTime: Date.now(), lastStatus: 'success', lastError: null });
+    closeModal('yandexCloudSettingsModal');
+    showToast(`Выгружено ${localItems.length} смет в Яндекс Облако`);
+  } catch(err) {
+    showToast(`Ошибка: ${err.message}`);
+  }
+}
+
+function initYandexCloudSync() {
+  updateYandexCloudStatusBar();
+  const cfg = getYandexCloudConfig();
+  if (cfg.endpoint && cfg.autoFetch) {
+    setTimeout(() => {
+      syncYandexCloud(true);
+    }, 1200);
+  }
+}
+
 /* --- Init --- */
 function init() {
   checkDealerMode();
@@ -3084,8 +3473,10 @@ function init() {
   calc();
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
+  initYandexCloudSync();
+
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=4.5').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=4.6').then(reg => {
       reg.update();
     }).catch(() => {});
   }

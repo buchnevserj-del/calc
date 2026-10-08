@@ -491,6 +491,27 @@
     </div>
   </div>
 
+  <!-- Yandex Cloud Sync Bar -->
+  <div class="yc-sync-status-bar" id="ycStatusBar">
+    <div class="yc-status-info">
+      <span class="yc-status-dot" id="ycStatusDot"></span>
+      <div class="yc-status-text-wrap">
+        <div class="yc-status-title" id="ycStatusTitle">☁️ Яндекс Облако: Локальный режим</div>
+        <div class="yc-status-sub" id="ycStatusSub">Нажмите «Настроить», чтобы включить синхронизацию между всеми устройствами</div>
+      </div>
+    </div>
+    <div class="yc-status-actions">
+      <button type="button" class="btn ghost btn-sm yc-sync-btn" id="ycSyncNowBtn" onclick="syncYandexCloud(false)" title="Синхронизировать историю с Яндекс Облаком">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+        <span>Синхронизировать</span>
+      </button>
+      <button type="button" class="btn ghost btn-sm" onclick="openYandexCloudSettingsModal()" title="Настройки подключения к Яндекс Облаку">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Настройки</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Search / Filter Input -->
   <div class="history-search-wrap">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -505,6 +526,73 @@
   <div class="admin-modal-footer">
     <button class="admin-link-btn" onclick="openChangePinModal()">🔑 Сменить PIN</button>
     <button class="admin-link-btn" onclick="lockAdmin()">🔒 Заблокировать</button>
+  </div>
+</div></div>
+
+<!-- Yandex Cloud Settings Modal (PIN Protected) -->
+<div class="modal" id="yandexCloudSettingsModal"><div class="mbox yc-settings-box">
+  <span class="close" onclick="closeModal('yandexCloudSettingsModal')">&times;</span>
+  <div class="yc-modal-header">
+    <div class="yc-icon-badge">☁️</div>
+    <div>
+      <h3>Синхронизация с Яндекс Облаком</h3>
+      <p class="yc-modal-sub">Единая база смет GlassLoft на смартфонах и компьютерах</p>
+    </div>
+  </div>
+
+  <div class="yc-form-group">
+    <label class="yc-label">URL функции / шлюза Яндекс Облака:</label>
+    <input type="url" id="ycEndpointInput" class="yc-input" placeholder="https://functions.yandexcloud.net/d4e..." autocomplete="off">
+    <span class="yc-hint">Ссылка на HTTP-триггер функции Yandex Cloud Functions или API Gateway</span>
+  </div>
+
+  <div class="yc-form-group">
+    <label class="yc-label">Секретный API-ключ компании (опционально):</label>
+    <input type="password" id="ycApiKeyInput" class="yc-input" placeholder="Введите API ключ (если включена авторизация)" autocomplete="off">
+    <span class="yc-hint">Используется в заголовке X-Api-Key для защиты данных от посторонних</span>
+  </div>
+
+  <div class="yc-toggles-grid">
+    <label class="yc-toggle-item">
+      <input type="checkbox" id="ycAutoSyncToggle" checked>
+      <div>
+        <strong>Авто-синхронизация при сохранении сметы</strong>
+        <span>Автоматически отправлять расчёт в Яндекс Облако при создании и правке</span>
+      </div>
+    </label>
+    <label class="yc-toggle-item">
+      <input type="checkbox" id="ycAutoFetchToggle" checked>
+      <div>
+        <strong>Авто-проверка при запуске калькулятора</strong>
+        <span>Подтягивать свежие сметы коллег с других устройств при открытии</span>
+      </div>
+    </label>
+  </div>
+
+  <div class="yc-test-result" id="ycTestResult" style="display:none;"></div>
+
+  <div class="yc-actions-row">
+    <button type="button" class="btn ghost btn-sm" onclick="testYandexCloudConnection()">🧪 Тест связи</button>
+    <button type="button" class="btn ghost btn-sm" onclick="pullFromYandexCloudDirect()">📥 Скачать всё из облака</button>
+    <button type="button" class="btn ghost btn-sm" onclick="pushToYandexCloudDirect()">📤 Отправить локальные в облако</button>
+    <button type="button" class="btn b-primary btn-sm" onclick="saveYandexCloudSettings()">💾 Сохранить</button>
+  </div>
+
+  <!-- Quick Guide Accordion -->
+  <div class="yc-guide-card">
+    <div class="yc-guide-header" onclick="toggleYcGuide()">
+      <span>📖 Как подключить Яндекс Облако за 2 минуты?</span>
+      <span id="ycGuideArrow">▼</span>
+    </div>
+    <div class="yc-guide-body" id="ycGuideBody" style="display:none;">
+      <ol>
+        <li>Зайдите в консоль <a href="https://console.cloud.yandex.ru/" target="_blank" style="color:var(--primary);font-weight:700;">console.cloud.yandex.ru</a> под своим Яндекс аккаунтом.</li>
+        <li>В разделе <b>Object Storage</b> создайте бакет <code>glassloft-calc-storage</code>.</li>
+        <li>В разделе <b>Cloud Functions</b> создайте бессерверную функцию <code>glassloft-sync</code> (Python 3.11 или Node.js).</li>
+        <li>Вставьте готовый код из файла <code>yandex_cloud_function.py</code> в редактор функции.</li>
+        <li>Включите переключатель <b>«Публичная функция»</b>, скопируйте ссылку функции и вставьте в поле выше!</li>
+      </ol>
+    </div>
   </div>
 </div></div>
 
