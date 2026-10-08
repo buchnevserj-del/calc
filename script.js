@@ -3033,8 +3033,19 @@ function saveAll() {
   saveCurrentToHistory(true);
 }
 
+const APP_VERSION = 'v4.5.260926';
+const APP_BUILD_NUM = '#60';
+const APP_BUILD_DATE = '26.09.2026';
+
+function updateVersionBadge() {
+  const versionTextEl = el('appVersionText');
+  if (versionTextEl) {
+    versionTextEl.innerHTML = `Версия: <b>${APP_VERSION}</b> (Сборка ${APP_BUILD_NUM} от ${APP_BUILD_DATE})`;
+  }
+}
+
 async function forceAppUpdate() {
-  showToast('Обновление приложения и сброс кэша... ⏳');
+  showToast('Сброс кэша и загрузка версии v4.5... ⏳');
   try {
     if ('caches' in window) {
       const keys = await caches.keys();
@@ -3048,8 +3059,12 @@ async function forceAppUpdate() {
     }
   } catch(e) {}
   setTimeout(() => {
-    window.location.reload(true);
-  }, 400);
+    const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+    let path = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '';
+    path = path.replace(/\/index\.html$/i, '').replace(/index\.html$/i, '').replace(/\/+$/, '');
+    const cleanUrl = origin + (path ? path : '') + '/';
+    window.location.href = cleanUrl + '?ts=' + Date.now();
+  }, 250);
 }
 
 /* --- Init --- */
@@ -3063,13 +3078,14 @@ function init() {
   renderPositionTabs();
   buildServiceList();
   updateHistoryBadge();
+  updateVersionBadge();
   renderHistoryList();
   if (el('delPrice')) el('delPrice').value = D.misc.delivery;
   calc();
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=4.3').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=4.5').then(reg => {
       reg.update();
     }).catch(() => {});
   }
