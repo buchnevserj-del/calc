@@ -1161,8 +1161,8 @@ function calcFromLength() {
 
 let adjMode = 'none'; // 'none' | 'discount' | 'markup'
 
-function setAdjMode(mode) {
-  adjMode = mode;
+function setAdjMode(mode, skipCalc = false) {
+  adjMode = mode || 'none';
   const tabNone = el('dmTabNone');
   const tabDisc = el('dmTabDiscount');
   const tabMark = el('dmTabMarkup');
@@ -1178,19 +1178,21 @@ function setAdjMode(mode) {
     if (tabDisc) tabDisc.classList.add('active-discount');
     if (inputWrap) inputWrap.style.display = 'block';
     if (inputLabel) inputLabel.textContent = 'Размер скидки, %';
-    if (pctInp && !pctInp.value) pctInp.value = '10';
+    if (pctInp && !pctInp.value && !skipCalc) pctInp.value = '10';
   } else if (mode === 'markup') {
     if (tabMark) tabMark.classList.add('active-markup');
     if (inputWrap) inputWrap.style.display = 'block';
     if (inputLabel) inputLabel.textContent = isDealerMode ? 'Размер вашей наценки, %' : 'Размер наценки / бонуса, %';
-    if (pctInp && !pctInp.value) pctInp.value = '15';
+    if (pctInp && !pctInp.value && !skipCalc) pctInp.value = '15';
   } else {
     if (tabNone) tabNone.classList.add('active');
     if (inputWrap) inputWrap.style.display = 'none';
-    if (pctInp) pctInp.value = '';
+    if (pctInp && !skipCalc) pctInp.value = '';
   }
 
-  calc();
+  if (!skipCalc) {
+    calc();
+  }
 }
 
 function getPriceMultiplier() {
@@ -2542,44 +2544,71 @@ async function duplicateCalculationFromHistory(id, event) {
 }
 
 function restoreCalculationData(item) {
+  if (!item) return;
+
+  // 1. Deep clone full appState from history item
   if (item.appState) {
     appState = JSON.parse(JSON.stringify(item.appState));
   }
   
+  // 2. Client & Address & Phone fields
   if (el('calcClient')) el('calcClient').value = item.client || 'Частное лицо';
   if (el('calcPhone')) el('calcPhone').value = item.phone || (item.extraData && item.extraData.phone) || '';
   if (el('calcAddress')) el('calcAddress').value = item.address || 'г. Санкт-Петербург';
 
+  // 3. Extra Data (Delivery, Services, Discounts/Markups, Terms) - without triggering premature calc()!
   if (item.extraData) {
     if (el('delOn') && item.extraData.delOn !== undefined) el('delOn').checked = item.extraData.delOn;
     if (el('delPrice') && item.extraData.delPrice !== undefined) el('delPrice').value = item.extraData.delPrice;
-    if (item.extraData.adjMode) setAdjMode(item.extraData.adjMode);
-    if (el('adjPercent') && item.extraData.adjPercent !== undefined) el('adjPercent').value = item.extraData.adjPercent;
+    
+    // Set Discount / Markup with skipCalc = true
+    const savedAdjMode = item.extraData.adjMode || 'none';
+    setAdjMode(savedAdjMode, true);
+    if (el('adjPercent')) {
+      el('adjPercent').value = (item.extraData.adjPercent !== undefined && item.extraData.adjPercent !== null) ? item.extraData.adjPercent : '';
+    }
+    
     if (item.extraData.termManual !== undefined) termManual = item.extraData.termManual;
     if (el('termDays') && item.extraData.termDays) el('termDays').value = item.extraData.termDays;
     
+    // Clear all services first, then restore only saved services
+    document.querySelectorAll('.servPrice').forEach(inp => { inp.value = ''; });
     if (Array.isArray(item.extraData.services)) {
       item.extraData.services.forEach(s => {
         const inp = document.querySelector(`.servPrice[data-idx="${s.idx}"]`);
         if (inp) inp.value = s.val || '';
       });
     }
+  } else {
+    setAdjMode('none', true);
   }
 
+  // 4. Set active category and reset active positions
   if (item.activeCategory && ['railings', 'balconies', 'showers', 'loft'].includes(item.activeCategory)) {
     activeCategory = item.activeCategory;
   }
   activePosIdx = { railings: 0, balconies: 0, showers: 0, loft: 0 };
 
+  // 5. Update Category Tab Buttons UI
   document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
   if (activeCategory === 'railings' && el('tabCatRailings')) el('tabCatRailings').classList.add('active');
   if (activeCategory === 'balconies' && el('tabCatBalconies')) el('tabCatBalconies').classList.add('active');
   if (activeCategory === 'showers' && el('tabCatShowers')) el('tabCatShowers').classList.add('active');
   if (activeCategory === 'loft' && el('tabCatLoft')) el('tabCatLoft').classList.add('active');
 
+  // 6. Render category HTML structure & position tabs
   renderCategoryContent();
   renderPositionTabs();
+  
+  // 7. Load values from restored appState into DOM inputs
   loadStateToInputs();
+
+  // 8. Re-apply adjPercent in case loadStateToInputs or render touched it
+  if (item.extraData && item.extraData.adjPercent !== undefined && el('adjPercent')) {
+    el('adjPercent').value = item.extraData.adjPercent;
+  }
+
+  // 9. Run ONE clean calculation to compute document totals
   calc();
   saveAppState();
 }
