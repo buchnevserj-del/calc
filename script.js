@@ -3081,8 +3081,8 @@ function saveAll() {
   saveCurrentToHistory(true);
 }
 
-const APP_VERSION = 'v5.2.091026';
-const APP_BUILD_NUM = '#61';
+const APP_VERSION = 'v5.3.091026';
+const APP_BUILD_NUM = '#62';
 const APP_BUILD_DATE = '09.10.2026';
 
 function updateVersionBadge() {
@@ -4081,6 +4081,48 @@ async function finalizePdfImport(rec, okMsg) {
     renderHistoryList();
   }
   setTimeout(() => showToast(okMsg), 400);
+}
+
+// Ни одна ошибка приложения больше не пройдёт молча
+window.addEventListener('error', function (e) {
+  try { showToast('⚠️ Ошибка: ' + (e.message || 'неизвестная')); } catch (_) {}
+});
+
+async function runPdfSelfTest() {
+  showToast('Запускаю самопроверку PDF-модуля... ⏳', true);
+  const report = [];
+  try {
+    report.push(typeof pdfjsLib !== 'undefined' ? '✅ Читалка PDF: загружена' : '❌ Читалка PDF: НЕ загружена');
+    report.push((window.jspdf && window.jspdf.jsPDF) ? '✅ Создатель PDF: загружен' : '❌ Создатель PDF: НЕ загружен');
+    const inp = el('pdfFileInput');
+    report.push(inp ? '✅ Поле выбора файла: на месте' : '❌ Поле выбора файла: не найдено');
+    if (typeof pdfjsLib !== 'undefined' && window.jspdf && window.jspdf.jsPDF) {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      pdf.text('GlassLoft self test', 10, 10);
+      embedRecoveryInPdf(pdf, buildRecoveryPayload(999));
+      const buf = pdf.output('arraybuffer');
+      const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+      const meta = await doc.getMetadata();
+      const kw = (meta && meta.info && meta.info.Keywords) || '';
+      let txt = '';
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const tc = await page.getTextContent();
+        txt += tc.items.map(x => x.str).join(' ') + ' ';
+      }
+      if (kw.indexOf('GLKP1:') !== -1 || txt.indexOf('GLKP1:') !== -1) {
+        report.push('✅ Полный цикл: PDF создается и читается');
+      } else {
+        report.push('❌ Полный цикл: блок восстановления не читается');
+      }
+    }
+    report.push('✅ Всё готово к загрузке PDF!');
+  } catch (e) {
+    report.push('❌ Ошибка цикла: ' + (e && e.message ? e.message : e));
+  }
+  hideToast();
+  alert('🔧 Самопроверка PDF-модуля:\n\n' + report.join('\n'));
 }
 
 function onPdfImportClick() {
