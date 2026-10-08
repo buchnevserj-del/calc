@@ -1953,6 +1953,7 @@ async function sharePDF(isMerged) {
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, 297));
+      embedRecoveryInPdf(pdf, buildRecoveryPayload(seqNum));
       
       const pdfBlob = pdf.output('blob');
       const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
@@ -2020,6 +2021,7 @@ async function exportKP(format, isMerged) {
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
         pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, 297));
+        embedRecoveryInPdf(pdf, buildRecoveryPayload(seqNum));
         pdf.save(`${baseName}.pdf`);
         showToast('КП скачано в формате PDF! 📄');
       } else {
@@ -3689,183 +3691,487 @@ function initCloudSync() {
 
 
 // PDF Import Handler (Client-Side Text Extractor with pdf.js)
+/* ============ Восстановление расчёта из PDF ============ */
+
+function utf8ToB64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  const CH = 0x4000;
+  for (let i = 0; i < bytes.length; i += CH) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  }
+  return btoa(bin);
+}
+
+function b64ToUtf8(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function parsePdfAmount(s) {
+  if (!s) return 0;
+  const v = parseFloat(String(s).replace(/[\s ]/g, '').replace(',', '.'));
+  return isNaN(v) ? 0 : v;
+}
+
+// Точный «слепок» текущего расчёта (для вшивания в PDF при экспорте)
+function buildRecoveryPayload(seqNum) {
+  try {
+    return {
+      magic: 'GLASSLOFT_KP_V1',
+      seqNum: seqNum || currentKpSeqNumber || 1,
+      date: getFormattedDates().dateStr,
+      client: (el('calcClient') && el('calcClient').value.trim()) || 'Частное лицо',
+      phone: (el('calcPhone') && el('calcPhone').value.trim()) || '',
+      address: (el('calcAddress') && el('calcAddress').value.trim()) || 'г. Санкт-Петербург',
+      activeCategory: activeCategory,
+      appState: JSON.parse(JSON.stringify(appState)),
+      extraData: {
+        phone: (el('calcPhone') && el('calcPhone').value.trim()) || '',
+        delOn: el('delOn') ? el('delOn').checked : true,
+        delPrice: el('delPrice') ? el('delPrice').value : 7500,
+        adjMode: adjMode,
+        adjPercent: el('adjPercent') ? el('adjPercent').value : '',
+        termManual: termManual,
+        termDays: el('termDays') ? el('termDays').value : '',
+        services: Array.from(document.querySelectorAll('.servPrice')).map(inp => ({ idx: inp.dataset.idx, val: inp.value }))
+      }
+    };
+  } catch (e) { return null; }
+}
+
+// Вшивает блок авто-восстановления в генерируемый PDF (метаданные + невидимый текст)
+function embedRecoveryInPdf(pdf, payloadObj) {
+  try {
+    if (!payloadObj) return;
+    const b64 = utf8ToB64(JSON.stringify(payloadObj));
+    try {
+      pdf.setProperties({
+        title: 'Коммерческое предложение GlassLoft',
+        subject: 'Коммерческое предложение GlassLoft',
+        keywords: 'GLKP1:' + b64,
+        creator: 'GlassLoft Calculator'
+      });
+    } catch (e) {}
+    try { pdf.setFont('helvetica', 'normal'); } catch (e) {}
+    try { pdf.setFontSize(1); pdf.setTextColor(255, 255, 255); } catch (e) {}
+    const CH = 500;
+    let n = 0;
+    for (let i = 0; i < b64.length; i += CH, n++) {
+      const tag = (n === 0 ? 'GLKP1:' : 'GLKP1+' + n + ':');
+      const line = tag + b64.substr(i, CH);
+      try {
+        pdf.text(line, 1, 296.5, { renderingMode: 'invisible' });
+      } catch (e) {
+        try { pdf.text(line, 1, 296.5); } catch (e2) {}
+      }
+    }
+  } catch (e) { console.warn('embedRecoveryInPdf:', e); }
+}
+
+function buildRecordFromPayload(p) {
+  const dates = getFormattedDates();
+  const productsSummary = [];
+  ['railings', 'balconies', 'showers', 'loft'].forEach(cat => {
+    (p.appState[cat] || []).forEach(pos => {
+      const hasDims = pos.length || pos.rectLen || pos.trapLen || pos.area || pos.fixedArea || pos.doorArea || pos.trapArea || pos.rectArea;
+      if (hasDims) productsSummary.push(pos.name || getDefaultPositionName(cat, 0));
+    });
+  });
+  const seq = p.seqNum || currentKpSeqNumber || 1;
+  const client = p.client || 'Частное лицо';
+  const address = p.address || 'г. Санкт-Петербург';
+  return {
+    id: 'calc_pdf_' + Date.now(),
+    timestamp: Date.now(),
+    dateFormatted: (p.date || dates.dateStr) + ' (точно из PDF)',
+    seqNum: seq,
+    kpNumber: '№ ' + seq + '/' + dates.noDots,
+    client: client,
+    phone: p.phone || '',
+    address: address,
+    title: client + ' — ' + address,
+    total: 0,
+    totalFormatted: '',
+    activeCategory: ['railings', 'balconies', 'showers', 'loft'].includes(p.activeCategory) ? p.activeCategory : 'balconies',
+    productsSummary: productsSummary.length ? productsSummary : ['Расчёт (восстановлен из PDF)'],
+    appState: p.appState,
+    extraData: p.extraData || null
+  };
+}
+
+function detectPdfCat(text, glassName) {
+  const t = ((text || '') + ' ' + (glassName || '')).toLowerCase();
+  if (/лофт/.test(t)) return 'loft';
+  if (/душев|душ/.test(t)) return 'showers';
+  if (/лестнич|лестниц/.test(t)) return 'railings';
+  if (/балкон/.test(t)) return 'balconies';
+  if (/огражден/.test(t)) return 'balconies';
+  const g = (glassName || '').toLowerCase();
+  if (/8\s*мм/.test(g)) return 'showers';
+  if (/6\s*мм/.test(g)) return 'loft';
+  return 'balconies';
+}
+
+function matchGlassKey(cat, glassName) {
+  const glassObj = (D[cat] && D[cat].glass) ? D[cat].glass : {};
+  const keys = Object.keys(glassObj);
+  if (!keys.length) return '';
+  if (!glassName) return keys[0];
+  const g = glassName.toLowerCase();
+  let best = keys[0];
+  let bestScore = 0;
+  keys.forEach(k => {
+    const words = k.toLowerCase().split(/[\s,()×x]+/).filter(w => w.length > 3);
+    let score = 0;
+    words.forEach(w => { if (g.indexOf(w) !== -1) score += w.length; });
+    if (score > bestScore) { bestScore = score; best = k; }
+  });
+  return best;
+}
+
+function fmtNum(n) {
+  return (Math.round(n * 100) / 100).toFixed(2).replace('.', ',');
+}
+
+// Разбор текстового слоя старого/чужого PDF в запись истории
+function parseKpTextToRecord(docText) {
+  const lines = docText.split('\n').map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+
+  // Номер и дата КП
+  const kpMatch = docText.match(/№\s*([0-9]{1,4})\s*[\/\\]\s*([0-9]{4,10})/);
+  const seqFromDoc = kpMatch ? parseInt(kpMatch[1], 10) : 0;
+  const dates = getFormattedDates();
+  const dateMatch = docText.match(/\b(\d{2}\.\d{2}\.\d{4})\b/);
+
+  // --- Реквизиты: Заказчик / Адрес ---
+  function grabAfterLabel(labelRe, stopRe, validator) {
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      const m = l.match(labelRe);
+      if (!m) continue;
+      let v = (l.slice(m.index + m[0].length) || '').replace(/^[\s:\-–—]+/, '');
+      const c = v.search(stopRe);
+      if (c === 0) v = '';
+      else if (c > 0) v = v.slice(0, c);
+      v = v.replace(/\s{2,}/g, ' ').trim();
+      if (validator(v)) return v;
+      // Пробуем следующую строку (двухколоночная шапка → значения снизу)
+      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+        let nv = lines[j];
+        if (/^(КОММЕРЧЕСКОЕ|НАИМЕНОВАНИЕ|СТОИМОСТЬ|ИТОГО|ОБЩИЕ|№|\d{1,2}\.\s*[А-ЯЁ]{3,})/i.test(nv)) continue;
+        const c2 = nv.search(stopRe);
+        if (c2 === 0) nv = ''; else if (c2 > 0) nv = nv.slice(0, c2);
+        nv = nv.trim();
+        if (validator(nv)) return nv;
+      }
+      return '';
+    }
+    return '';
+  }
+  let address = grabAfterLabel(/АДРЕС(?:\s+ОБЪЕКТА)?/i, /\b(ЗАКАЗЧИК|НАИМЕНОВАНИЕ)\b/i,
+    v => v.length >= 5 && /[а-яА-ЯёЁ]/.test(v) && /(\d|\bг\. |город|ул\. |улица|пр\. |проспект|пр-д|пер\. |шоссе|наб\. )/i.test(v));
+  if (!address) address = 'г. Санкт-Петербург';
+  let client = grabAfterLabel(/ЗАКАЗЧИК/i, /\b(АДРЕС|НАИМЕНОВАНИЕ|СТОИМОСТЬ)\b/i,
+    v => v.length >= 3 && /^[А-ЯЁа-яё][А-ЯЁа-яё\s\-\.]{2,80}$/.test(v) && !/огражден|перегород|душев|лофт|стекл|издели|наименован/i.test(v));
+  if (!client) client = 'Частное лицо';
+
+  // --- Итоговая сумма ---
+  let totalSum = 0;
+  const itogIdx = docText.search(/ИТОГО/i);
+  if (itogIdx !== -1) {
+    const after = docText.slice(itogIdx, itogIdx + 300);
+    const am = after.match(/([0-9][0-9\s ]*(?:[,.]\d{1,2})?)\s*(?:₽|руб)/);
+    if (am) totalSum = parsePdfAmount(am[1]);
+  }
+  if (!totalSum) {
+    const all = [...docText.matchAll(/([0-9][0-9\s ]*(?:[,.]\d{1,2})?)\s*(?:₽|руб)/g)].map(m => parsePdfAmount(m[1]));
+    if (all.length) totalSum = Math.max.apply(null, all);
+  }
+
+  // --- Таблица позиций ---
+  function splitTextRow(line) {
+    const m = line.match(/^(.*?)\s+(компл\.?|усл\.?\s*ед\.?|услуга|шт\.?|м\.?\s*пог\.?|м\.п\.|м2|м²|кв\.?\s*м|поз\.?)\s+(.+)$/i);
+    if (!m) return null;
+    const name = m[1].trim();
+    const rest = m[3];
+    if (!/[а-яА-ЯёЁ]/.test(name)) return null;
+    const groups = rest.match(/(?:не\s*требу(?:ется|ются))|[0-9]+(?:[\s ][0-9]{3})*(?:[,.][0-9]{1,2})?|[0-9]+(?:[,.][0-9]{1,2})?/gi) || [];
+    let total = 0;
+    if (groups.length >= 2) total = parsePdfAmount(groups[groups.length - 1]);
+    const notNeeded = /не\s*требу/i.test(rest);
+    return { name: name, total: total, notNeeded: notNeeded };
+  }
+
+  const positions = [];
+  const services = [];
+  let delivery = null;
+  let cur = null;
+  let docTitle = 'Восстановлено из PDF';
+
+  function ensurePos() {
+    if (!cur) cur = { name: docTitle, glassName: '', glassSum: 0, hardSum: 0, railName: '', railSum: 0, instSum: 0, instOn: false };
+    return cur;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/НАИМЕНОВАНИЕ\s+ИЗДЕЛИЯ/i.test(line)) {
+      for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+        const cand = lines[j];
+        if (cand && !/СТОИМОСТЬ|НАИМЕНОВАНИЕ|ЕД|КОЛ-ВО|ИТОГО|₽|руб/i.test(cand) && /[а-яА-ЯёЁ]/.test(cand)) { docTitle = cand; break; }
+      }
+      continue;
+    }
+    if (/ОБЩИЕ\s+УСЛУГИ/i.test(line)) {
+      if (cur) { positions.push(cur); cur = null; }
+      continue;
+    }
+    const sm = line.match(/^(\d{1,2})\.\s*([А-ЯЁA-Z][А-ЯЁA-Z\s\d\-\.,()&№×xX]{2,80})$/);
+    if (sm && !/НАИМЕНОВАНИЕ|ИЗДЕЛИЯ|УСЛУГИ/i.test(sm[2])) {
+      if (cur) { positions.push(cur); cur = null; }
+      const low = sm[2].trim().toLowerCase();
+      cur = { name: low.charAt(0).toUpperCase() + low.slice(1), glassName: '', glassSum: 0, hardSum: 0, railName: '', railSum: 0, instSum: 0, instOn: false };
+      continue;
+    }
+    const row = splitTextRow(line);
+    if (!row) continue;
+    const nm = row.name.toLowerCase();
+    if (/^стекло/.test(nm)) {
+      const p = ensurePos();
+      p.glassSum = (p.glassSum || 0) + row.total;
+      p.glassName = row.name.replace(/^стекло\s*(закал[её]нное)?\s*/i, '').trim();
+    } else if (/комплект\s+фурнитур/.test(nm)) {
+      const p = ensurePos();
+      p.hardSum = (p.hardSum || 0) + row.total;
+    } else if (/^поручень/.test(nm)) {
+      const p = ensurePos();
+      p.railSum = (p.railSum || 0) + row.total;
+      p.railName = row.name.replace(/^поручень\s*[:\-–]?\s*/i, '').trim();
+    } else if (/монтажн/.test(nm)) {
+      const p = ensurePos();
+      p.instSum = (p.instSum || 0) + row.total;
+      if (!row.notNeeded && row.total > 0) p.instOn = true;
+    } else if (/доставка/.test(nm)) {
+      delivery = { on: row.total > 0 && !row.notNeeded, price: row.total > 0 ? row.total : D.misc.delivery };
+    } else if (/итого|общая\s+стоимость/i.test(nm)) {
+      continue;
+    } else {
+      services.push({ name: row.name.replace(/\s+/g, ' ').trim(), sum: row.total });
+    }
+  }
+  if (cur) positions.push(cur);
+
+  // Пустышки не пропускаем
+  const hasAny = positions.some(p => (p.glassSum + p.hardSum + p.railSum + p.instSum) > 0);
+  if (!hasAny && services.length === 0 && !delivery && totalSum === 0) return null;
+  if (!hasAny && totalSum > 0) {
+    positions.length = 0;
+    positions.push({ name: docTitle, glassName: '', glassSum: totalSum, hardSum: 0, railName: '', railSum: 0, instSum: 0, instOn: false });
+  }
+
+  // --- Собираем appState ---
+  const newAppState = { railings: [], balconies: [], showers: [], loft: [] };
+  let activeCat = null;
+  const productNames = [];
+
+  positions.forEach(p => {
+    const cat = detectPdfCat(p.name + ' ' + docTitle, p.glassName);
+    const glassKey = matchGlassKey(cat, p.glassName);
+    const glPrice = (D[cat].glass[glassKey] && D[cat].glass[glassKey].price) || 10000;
+    const productSum = p.glassSum + p.hardSum + p.railSum;
+    const estArea = Math.max(0.5, productSum / glPrice);
+    const idxInCat = newAppState[cat].length;
+
+    const pos = {
+      id: Date.now() + Math.floor(Math.random() * 100000),
+      name: p.name || getDefaultPositionName(cat, idxInCat),
+      trapLen: '', rectLen: '', trapArea: '', rectArea: '',
+      length: '', heightMm: '1000',
+      fixedArea: '', doorArea: '',
+      area: '', profileLen: '', gridLen: '',
+      glass: glassKey,
+      hardQty: {}, hardSum: {},
+      railSelect: 'Без поручня', railLength: '', railManual: '',
+      instOn: p.instOn, instMode: 'fix',
+      instFix: p.instSum || 0, instPct: 30
+    };
+
+    if (cat === 'balconies') pos.length = fmtNum(estArea);
+    else if (cat === 'railings') pos.rectLen = fmtNum(estArea / 1.25);
+    else if (cat === 'showers') pos.fixedArea = fmtNum(estArea);
+    else { pos.area = fmtNum(estArea); pos.profileLen = fmtNum(estArea * 2); }
+
+    newAppState[cat].push(pos);
+    if (!activeCat) activeCat = cat;
+    productNames.push(pos.name);
+  });
+
+  // --- Услуги ---
+  const extraData = {
+    phone: '',
+    delOn: delivery ? delivery.on : true,
+    delPrice: delivery && delivery.on ? String(Math.round(delivery.price)) : String(D.misc.delivery),
+    adjMode: 'none',
+    adjPercent: '',
+    termManual: false,
+    termDays: '',
+    services: []
+  };
+
+  let newServicesAdded = false;
+  services.forEach(s => {
+    let idx = D.services.findIndex(x => x.name.trim().toLowerCase() === s.name.trim().toLowerCase());
+    if (idx === -1) {
+      D.services.push({ name: s.name.slice(0, 120), emptyDefault: 'hide' });
+      idx = D.services.length - 1;
+      newServicesAdded = true;
+    }
+    extraData.services.push({ idx: String(idx), val: String(Math.round(s.sum)) });
+  });
+  if (newServicesAdded && typeof buildServiceList === 'function') buildServiceList();
+
+  const seq = seqFromDoc || currentKpSeqNumber || 1;
+  const actCat = activeCat || detectPdfCat(docTitle + ' ' + docText.slice(0, 400), '');
+
+  return {
+    id: 'calc_pdf_' + Date.now(),
+    timestamp: Date.now(),
+    dateFormatted: (dateMatch ? dateMatch[1] : dates.dateStr) + ' (из PDF)',
+    seqNum: seq,
+    kpNumber: kpMatch ? ('№ ' + kpMatch[1] + '/' + kpMatch[2]) : ('№ ' + seq + '/' + dates.noDots),
+    client: client,
+    phone: '',
+    address: address,
+    title: client + ' — ' + address,
+    total: totalSum,
+    totalFormatted: totalSum ? rub(totalSum) : '',
+    activeCategory: actCat,
+    productsSummary: productNames.length ? productNames : [docTitle],
+    appState: newAppState,
+    extraData: extraData
+  };
+}
+
+async function finalizePdfImport(rec, okMsg) {
+  const history = getSavedHistory();
+  history.unshift(rec);
+  saveHistoryList(history, true);
+  renderHistoryList();
+  loadCalculationFromHistory(rec.id);
+  // Обновляем итог записи по фактически посчитанной сумме калькулятора
+  const sumText = el('sum') ? el('sum').textContent.trim() : '';
+  const val = parsePdfAmount((sumText || '').replace(/₽|руб\.?/g, ''));
+  const h2 = getSavedHistory();
+  const idx = h2.findIndex(h => h.id === rec.id);
+  if (idx !== -1) {
+    if (val > 0) { h2[idx].total = val; h2[idx].totalFormatted = sumText || h2[idx].totalFormatted; }
+    saveHistoryList(h2);
+    renderHistoryList();
+  }
+  setTimeout(() => showToast(okMsg), 400);
+}
+
 async function importPdfKp(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
-  
+
   if (typeof pdfjsLib === 'undefined') {
-    showToast('PDF модуль не загружен. Требуется интернет.');
+    showToast('PDF модуль не загружен. Откройте страницу с интернетом и повторите.');
+    event.target.value = '';
     return;
   }
-  
-  showToast('Обработка PDF документа... ⏳');
-  
+
+  showToast('Читаю PDF документ... ⏳');
+
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const doc = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-    let fullText = '';
-    
+    const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    // ---- Шаг 1: извлекаем текст с сохранением построчной структуры ----
+    let docText = '';
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i);
-      const textContent = await page.getTextContent();
-      fullText += textContent.items.map(it => it.str).join(' ') + '\n';
-    }
-    
-    // Clean up double spaces & form special block separators
-    fullText = fullText.replace(/\s+/g, ' ');
-    
-    // Parse Customer Info
-    const clientMatch = fullText.match(/Заказчик[:\.\s]*([^А-Яа-я]*\b[А-Яа-яёЁ\s\-]{3,})/i);
-    const client = clientMatch ? clientMatch[1].trim() : 'Частное лицо';
-    
-    const addrMatch = fullText.match(/Адрес[:\.\s]*([\w\s\.\-,]{5,})/i);
-    const address = addrMatch ? addrMatch[1].trim() : 'г. Санкт-Петербург';
-    
-    // Find Total Price
-    const totalMatches = fullText.match(/(?:Итого|Общая стоимость|с учетом скидки)[^\d\р\₽]*?([\d\s\.\,]+)\s*(?:руб|₽)/i);
-    let totalSum = 0;
-    if (totalMatches) {
-      const rawVal = totalMatches[1].replace(/[\s\.]/g, '').replace(',', '.');
-      totalSum = parseFloat(rawVal) || 0;
-    }
-    
-    // Determine Category
-    let cat = 'balconies';
-    if (/[лл]естнич/i.test(fullText)) cat = 'railings';
-    else if (/[дд]ушев/i.test(fullText)) cat = 'showers';
-    else if (/[лл]офт/i.test(fullText)) cat = 'loft';
-    
-    // Try finding positions (e.g. "1. БАЛКОННЫЕ ОГРАЖДЕНИЯ = 182500 ₽")
-    const posItems = [];
-    const itemRegex = /(?:\d+\.\s*|[\•]\s*)([^\d\•]{4,60})\s*[\=\:\,]\s*(\d[\d\s\.,]*)\s*(?:руб|₽)/gi;
-    let m;
-    while ((m = itemRegex.exec(fullText)) !== null) {
-      const name = m[1].trim();
-      let valStr = m[2].replace(/[\s\.]/g, '').replace(',', '.');
-      const val = parseFloat(valStr) || 0;
-      if (val > 500 && /[а-яА-Я]/i.test(name)) {
-        posItems.push({ name, total: val });
+      const tc = await page.getTextContent();
+      const items = tc.items
+        .map(it => ({ str: it.str || '', x: (it.transform && it.transform[4]) || 0, y: (it.transform && it.transform[5]) || 0 }))
+        .filter(it => it.str.trim() !== '');
+      items.sort((a, b) => (b.y - a.y) || (a.x - b.x));
+      const rows = [];
+      for (const it of items) {
+        const last = rows[rows.length - 1];
+        if (last && Math.abs(last.y - it.y) < 4) {
+          last.items.push(it);
+          last.y = (last.y + it.y) / 2;
+        } else {
+          rows.push({ y: it.y, items: [it] });
+        }
       }
+      docText += rows.map(r => r.items.map(v => v.str).join(' ')).join('\n') + '\n';
     }
-    
-    // Fallback if no positions found but total exists
-    if (posItems.length === 0 && totalSum > 0) {
-      posItems.push({
-        name: cat === 'railings' ? 'Лестничное ограждение (восстановлено из PDF)' : 
-              cat === 'balconies' ? 'Балконное ограждение (восстан. из PDF)' :
-              cat === 'showers' ? 'Душевое ограждение (восстан. из PDF)' :
-              'Лофт-перегородка (восстан. из PDF)',
-        total: totalSum
-      });
-    } else if (posItems.length > 0 && totalSum > 0) {
-      // Scale relative to total if available
-      const rawSum = posItems.reduce((acc, it) => acc + it.total, 0);
-      if (rawSum > 0 && rawSum !== totalSum) {
-        const ratio = totalSum / rawSum;
-        posItems.forEach(it => it.total = roundUp500(it.total * ratio));
+
+    // ---- Шаг 2: скрытый блок авто-восстановления (точное восстановление) ----
+    let payloadObj = null;
+    try {
+      const meta = await doc.getMetadata();
+      const kw = (meta && meta.info && (meta.info.Keywords || meta.info.keywords)) || '';
+      const mi = kw.indexOf('GLKP1:');
+      if (mi !== -1) {
+        const b64 = kw.slice(mi + 6).replace(/[^A-Za-z0-9+/=]/g, '');
+        const obj = JSON.parse(b64ToUtf8(b64));
+        if (obj && obj.magic === 'GLASSLOFT_KP_V1' && obj.appState) payloadObj = obj;
       }
+    } catch (e) {}
+
+    if (!payloadObj) {
+      try {
+        const parts = {};
+        let hasFirst = false;
+        const re = /GLKP1(?:\+(\d+))?:([A-Za-z0-9+/=]+)/g;
+        let mm;
+        while ((mm = re.exec(docText)) !== null) {
+          const n = mm[1] ? parseInt(mm[1], 10) : 0;
+          if (n === 0) hasFirst = true;
+          if (!parts[n]) parts[n] = mm[2];
+        }
+        if (hasFirst) {
+          let b64 = '';
+          for (let i = 0; parts[i]; i++) b64 += parts[i];
+          const obj = JSON.parse(b64ToUtf8(b64));
+          if (obj && obj.magic === 'GLASSLOFT_KP_V1' && obj.appState) payloadObj = obj;
+        }
+      } catch (e) {}
     }
-    
-    if (posItems.length === 0) {
-      showToast('В PDF не найдено ценовых позиций или итоговой суммы. Смета восстановлена из базовых данных.');
-      posItems.push({ name: 'Заказ (восстановлено)', total: 0 });
+
+    if (payloadObj) {
+      const rec = buildRecordFromPayload(payloadObj);
+      await finalizePdfImport(rec, 'Расчёт полностью и точно восстановлен из PDF! 🎯 Теперь можно вносить правки.');
+      event.target.value = '';
+      return;
     }
-    
-    // Build Calculations State
-    const newHistoryId = 'calc_pdf_' + Date.now();
-    const calcAppState = {
-      railings: [],
-      balconies: [],
-      showers: [],
-      loft: []
-    };
-    
-    const catMap = {
-      railings: 'Лестничное ограждение',
-      balconies: 'Балконное ограждение',
-      showers: 'Душевое ограждение',
-      loft: 'Лофт-перегородка'
-    };
-    
-    let catSumTotal = 0;
-    
-    posItems.forEach((it, idx) => {
-      const posAppState = {
-        id: Date.now() + idx,
-        name: it.name,
-        trapLen: '', rectLen: '', trapArea: '', rectArea: '',
-        length: '', heightMm: '1000',
-        fixedArea: '', doorArea: '',
-        area: '', profileLen: '', gridLen: '',
-        hardQty: {}, hardSum: {},
-        railSelect: 'Без поручня', railLength: '', railManual: '',
-        instOn: true, instMode: 'fix', instFix: 0, instPct: 0
-      };
-      
-      // We simulate a raw area to get the amount
-      const glassPrice = D[cat].glass[Object.keys(D[cat].glass)[0]]?.price || 10000;
-      const estArea = it.total / glassPrice;
-      
-      if (cat === 'balconies') {
-        const len = Math.max(1, estArea);
-        posAppState.length = len.toFixed(2).replace('.', ',');
-        posAppState.heightMm = '1000';
-      } else if (cat === 'railings') {
-        const len = Math.max(1, estArea / 1.25);
-        posAppState.rectLen = len.toFixed(2).replace('.', ',');
-      } else if (cat === 'showers') {
-        posAppState.fixedArea = estArea.toFixed(2).replace('.', ',');
-      } else {
-        posAppState.area = estArea.toFixed(2).replace('.', ',');
-      }
-      
-      // Put hardware remainder sum directly into common service
-      calcAppState[cat].push(posAppState);
-      catSumTotal += it.total;
-    });
-    
-    // Let's construct additional data
-    const newKpCalc = {
-      id: newHistoryId,
-      timestamp: Date.now(),
-      dateFormatted: getFormattedDates().dateStr,
-      seqNum: currentKpSeqNumber || 1,
-      kpNumber: `№ ${currentKpSeqNumber || 1}/${getFormattedDates().noDots}`,
-      client: client,
-      address: address,
-      title: `${client} — ${address}`,
-      total: catSumTotal || totalSum,
-      totalFormatted: rub(catSumTotal || totalSum),
-      activeCategory: cat,
-      productsSummary: posItems.map(it => it.name),
-      appState: calcAppState,
-      extraData: {
-        delOn: true,
-        delPrice: 7500,
-        adjMode: 'none',
-        adjPercent: '',
-        termManual: false,
-        termDays: '21',
-        services: []
-      }
-    };
-    
-    // Save to history and Load
-    const history = getSavedHistory();
-    history.unshift(newKpCalc);
-    saveHistoryList(history);
-    
-    // Load into active calculator to edit!
-    loadCalculationFromHistory(newKpCalc.id);
-    setTimeout(() => {
-      showToast(`Коммерческое предложение успешно извлечено и загружено в калькулятор для правок! ✏️`);
-    }, 400);
-    
-  } catch(err) {
+
+    // ---- Шаг 3: текстовый разбор (старые PDF без скрытого блока) ----
+    if (!/[а-яА-Яa-zA-Z]/.test(docText)) {
+      showToast('Этот PDF состоит из картинок (скан). Совет: скачайте КП заново кнопкой «PDF» — в новые файлы встроено авто-восстановление.');
+      event.target.value = '';
+      return;
+    }
+
+    const rec = parseKpTextToRecord(docText);
+    if (!rec) {
+      showToast('Не удалось распознать данные в PDF. Проверьте, что это КП GlassLoft, или восстановите расчёт вручную.');
+      event.target.value = '';
+      return;
+    }
+
+    await finalizePdfImport(rec, 'Смета восстановлена из PDF ' + (rec.totalFormatted ? ('(итог ' + rec.totalFormatted + ') ') : '') + '✏️ Проверьте значения перед отправкой клиенту.');
+  } catch (err) {
     console.error(err);
-    showToast(`Ошибка чтения PDF: ${err.message || 'Файл поврежден или защищен'}`);
+    showToast('Ошибка чтения PDF: ' + (err.message || 'файл повреждён или защищён'));
   }
-  
+
   event.target.value = '';
 }
 
