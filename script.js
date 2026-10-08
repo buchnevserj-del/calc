@@ -3687,6 +3687,188 @@ function initCloudSync() {
 }
 
 
+
+// PDF Import Handler (Client-Side Text Extractor with pdf.js)
+async function importPdfKp(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  
+  if (typeof pdfjsLib === 'undefined') {
+    showToast('PDF модуль не загружен. Требуется интернет.');
+    return;
+  }
+  
+  showToast('Обработка PDF документа... ⏳');
+  
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    let fullText = '';
+    
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const textContent = await page.getTextContent();
+      fullText += textContent.items.map(it => it.str).join(' ') + '\n';
+    }
+    
+    // Clean up double spaces & form special block separators
+    fullText = fullText.replace(/\s+/g, ' ');
+    
+    // Parse Customer Info
+    const clientMatch = fullText.match(/Заказчик[:\.\s]*([^А-Яа-я]*\b[А-Яа-яёЁ\s\-]{3,})/i);
+    const client = clientMatch ? clientMatch[1].trim() : 'Частное лицо';
+    
+    const addrMatch = fullText.match(/Адрес[:\.\s]*([\w\s\.\-,]{5,})/i);
+    const address = addrMatch ? addrMatch[1].trim() : 'г. Санкт-Петербург';
+    
+    // Find Total Price
+    const totalMatches = fullText.match(/(?:Итого|Общая стоимость|с учетом скидки)[^\d\р\₽]*?([\d\s\.\,]+)\s*(?:руб|₽)/i);
+    let totalSum = 0;
+    if (totalMatches) {
+      const rawVal = totalMatches[1].replace(/[\s\.]/g, '').replace(',', '.');
+      totalSum = parseFloat(rawVal) || 0;
+    }
+    
+    // Determine Category
+    let cat = 'balconies';
+    if (/[лл]естнич/i.test(fullText)) cat = 'railings';
+    else if (/[дд]ушев/i.test(fullText)) cat = 'showers';
+    else if (/[лл]офт/i.test(fullText)) cat = 'loft';
+    
+    // Try finding positions (e.g. "1. БАЛКОННЫЕ ОГРАЖДЕНИЯ = 182500 ₽")
+    const posItems = [];
+    const itemRegex = /(?:\d+\.\s*|[\•]\s*)([^\d\•]{4,60})\s*[\=\:\,]\s*(\d[\d\s\.,]*)\s*(?:руб|₽)/gi;
+    let m;
+    while ((m = itemRegex.exec(fullText)) !== null) {
+      const name = m[1].trim();
+      let valStr = m[2].replace(/[\s\.]/g, '').replace(',', '.');
+      const val = parseFloat(valStr) || 0;
+      if (val > 500 && /[а-яА-Я]/i.test(name)) {
+        posItems.push({ name, total: val });
+      }
+    }
+    
+    // Fallback if no positions found but total exists
+    if (posItems.length === 0 && totalSum > 0) {
+      posItems.push({
+        name: cat === 'railings' ? 'Лестничное ограждение (восстановлено из PDF)' : 
+              cat === 'balconies' ? 'Балконное ограждение (восстан. из PDF)' :
+              cat === 'showers' ? 'Душевое ограждение (восстан. из PDF)' :
+              'Лофт-перегородка (восстан. из PDF)',
+        total: totalSum
+      });
+    } else if (posItems.length > 0 && totalSum > 0) {
+      // Scale relative to total if available
+      const rawSum = posItems.reduce((acc, it) => acc + it.total, 0);
+      if (rawSum > 0 && rawSum !== totalSum) {
+        const ratio = totalSum / rawSum;
+        posItems.forEach(it => it.total = roundUp500(it.total * ratio));
+      }
+    }
+    
+    if (posItems.length === 0) {
+      showToast('В PDF не найдено ценовых позиций или итоговой суммы. Смета восстановлена из базовых данных.');
+      posItems.push({ name: 'Заказ (восстановлено)', total: 0 });
+    }
+    
+    // Build Calculations State
+    const newHistoryId = 'calc_pdf_' + Date.now();
+    const calcAppState = {
+      railings: [],
+      balconies: [],
+      showers: [],
+      loft: []
+    };
+    
+    const catMap = {
+      railings: 'Лестничное ограждение',
+      balconies: 'Балконное ограждение',
+      showers: 'Душевое ограждение',
+      loft: 'Лофт-перегородка'
+    };
+    
+    let catSumTotal = 0;
+    
+    posItems.forEach((it, idx) => {
+      const posAppState = {
+        id: Date.now() + idx,
+        name: it.name,
+        trapLen: '', rectLen: '', trapArea: '', rectArea: '',
+        length: '', heightMm: '1000',
+        fixedArea: '', doorArea: '',
+        area: '', profileLen: '', gridLen: '',
+        hardQty: {}, hardSum: {},
+        railSelect: 'Без поручня', railLength: '', railManual: '',
+        instOn: true, instMode: 'fix', instFix: 0, instPct: 0
+      };
+      
+      // We simulate a raw area to get the amount
+      const glassPrice = D[cat].glass[Object.keys(D[cat].glass)[0]]?.price || 10000;
+      const estArea = it.total / glassPrice;
+      
+      if (cat === 'balconies') {
+        const len = Math.max(1, estArea);
+        posAppState.length = len.toFixed(2).replace('.', ',');
+        posAppState.heightMm = '1000';
+      } else if (cat === 'railings') {
+        const len = Math.max(1, estArea / 1.25);
+        posAppState.rectLen = len.toFixed(2).replace('.', ',');
+      } else if (cat === 'showers') {
+        posAppState.fixedArea = estArea.toFixed(2).replace('.', ',');
+      } else {
+        posAppState.area = estArea.toFixed(2).replace('.', ',');
+      }
+      
+      // Put hardware remainder sum directly into common service
+      calcAppState[cat].push(posAppState);
+      catSumTotal += it.total;
+    });
+    
+    // Let's construct additional data
+    const newKpCalc = {
+      id: newHistoryId,
+      timestamp: Date.now(),
+      dateFormatted: getFormattedDates().dateStr,
+      seqNum: currentKpSeqNumber || 1,
+      kpNumber: `№ ${currentKpSeqNumber || 1}/${getFormattedDates().noDots}`,
+      client: client,
+      address: address,
+      title: `${client} — ${address}`,
+      total: catSumTotal || totalSum,
+      totalFormatted: rub(catSumTotal || totalSum),
+      activeCategory: cat,
+      productsSummary: posItems.map(it => it.name),
+      appState: calcAppState,
+      extraData: {
+        delOn: true,
+        delPrice: 7500,
+        adjMode: 'none',
+        adjPercent: '',
+        termManual: false,
+        termDays: '21',
+        services: []
+      }
+    };
+    
+    // Save to history and Load
+    const history = getSavedHistory();
+    history.unshift(newKpCalc);
+    saveHistoryList(history);
+    
+    // Load into active calculator to edit!
+    loadCalculationFromHistory(newKpCalc.id);
+    setTimeout(() => {
+      showToast(`Коммерческое предложение успешно извлечено и загружено в калькулятор для правок! ✏️`);
+    }, 400);
+    
+  } catch(err) {
+    console.error(err);
+    showToast(`Ошибка чтения PDF: ${err.message || 'Файл поврежден или защищен'}`);
+  }
+  
+  event.target.value = '';
+}
+
 /* --- Init --- */
 function init() {
   checkDealerMode();
