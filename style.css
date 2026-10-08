@@ -1418,7 +1418,34 @@ input:checked + .slider:before {
   100% { transform: rotate(360deg); }
 }
 
-/* Yandex Cloud Settings Modal */
+/* Yandex / Firebase / Supabase Cloud Settings Modal */
+.cloud-provider-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--card-sub);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+.cloud-tab {
+  flex: 1;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  font: 700 12px 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.cloud-tab.active {
+  background: #ffffff;
+  color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
 .yc-settings-box {
   max-width: 540px;
   width: 95vw;

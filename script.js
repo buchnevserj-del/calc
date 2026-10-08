@@ -3076,22 +3076,46 @@ async function forceAppUpdate() {
 }
 
 
+function saveHistoryList(list, skipSync = false) {
+  try {
+    localStorage.setItem('glassloft_calc_history_v1', JSON.stringify(list.slice(0, MAX_HISTORY_ITEMS)));
+  } catch(e) {}
+  updateHistoryBadge();
+  if (!skipSync) {
+    try {
+      const cfg = getCloudConfig();
+      const hasEndpoint = (cfg.provider === 'firebase' && cfg.fbUrl) ||
+                          (cfg.provider === 'supabase' && cfg.sbUrl) ||
+                          (cfg.provider === 'custom' && cfg.customUrl);
+      if (hasEndpoint && cfg.autoSync) {
+        syncCloudData(true);
+      }
+    } catch(e) {}
+  }
+}
+
 /* ==========================================================================
-   Yandex Cloud Synchronization Module (Yandex Cloud Functions / Object Storage)
+   Universal Free Cloud Synchronization Module (Firebase / Supabase / REST)
    ========================================================================== */
 
-const YC_CONFIG_KEY = 'glassloft_yc_sync_config_v1';
-let isYcSyncing = false;
+const CLOUD_CONFIG_KEY = 'glassloft_free_cloud_config_v2';
+let isCloudSyncing = false;
+let currentCloudProvider = 'firebase';
 
-function getYandexCloudConfig() {
+function getCloudConfig() {
   try {
-    const raw = localStorage.getItem(YC_CONFIG_KEY);
+    const raw = localStorage.getItem(CLOUD_CONFIG_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         return {
-          endpoint: parsed.endpoint || '',
-          apiKey: parsed.apiKey || '',
+          provider: parsed.provider || 'firebase',
+          fbUrl: parsed.fbUrl || '',
+          fbApiKey: parsed.fbApiKey || '',
+          sbUrl: parsed.sbUrl || '',
+          sbApiKey: parsed.sbApiKey || '',
+          customUrl: parsed.customUrl || '',
+          customApiKey: parsed.customApiKey || '',
           autoSync: parsed.autoSync !== false,
           autoFetch: parsed.autoFetch !== false,
           lastSyncTime: parsed.lastSyncTime || null,
@@ -3102,8 +3126,13 @@ function getYandexCloudConfig() {
     }
   } catch(e) {}
   return {
-    endpoint: '',
-    apiKey: '',
+    provider: 'firebase',
+    fbUrl: '',
+    fbApiKey: '',
+    sbUrl: '',
+    sbApiKey: '',
+    customUrl: '',
+    customApiKey: '',
     autoSync: true,
     autoFetch: true,
     lastSyncTime: null,
@@ -3112,78 +3141,127 @@ function getYandexCloudConfig() {
   };
 }
 
-function setYandexCloudConfig(cfg) {
+function setCloudConfig(cfg) {
   try {
-    const current = getYandexCloudConfig();
+    const current = getCloudConfig();
     const updated = Object.assign({}, current, cfg);
-    localStorage.setItem(YC_CONFIG_KEY, JSON.stringify(updated));
+    localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(updated));
   } catch(e) {}
-  updateYandexCloudStatusBar();
+  updateCloudStatusBar();
 }
 
-function updateYandexCloudStatusBar() {
-  const dot = el('ycStatusDot');
-  const title = el('ycStatusTitle');
-  const sub = el('ycStatusSub');
-  const syncBtn = el('ycSyncNowBtn');
-  const cfg = getYandexCloudConfig();
+function selectCloudProvider(prov) {
+  currentCloudProvider = prov;
+  ['Firebase', 'Supabase', 'Custom'].forEach(p => {
+    const tab = el(`tabProvider${p}`);
+    const fields = el(`fieldsProvider${p}`);
+    if (tab) tab.classList.toggle('active', p.toLowerCase() === prov);
+    if (fields) fields.style.display = (p.toLowerCase() === prov) ? 'block' : 'none';
+  });
+  
+  const guideHeader = el('cloudGuideArrow')?.previousElementSibling;
+  const guideBody = el('cloudGuideBody');
+  if (guideHeader && guideBody) {
+    if (prov === 'firebase') {
+      guideHeader.textContent = '📖 Как настроить бесплатный Firebase за 2 минуты?';
+      guideBody.innerHTML = `<ol>
+        <li>Откройте <a href="https://console.firebase.google.com/" target="_blank" style="color:var(--primary);font-weight:700;">console.firebase.google.com</a> под Google-аккаунтом и нажмите <b>«Создать проект»</b> (например, <code>glassloft-calc</code>).</li>
+        <li>В левом меню выберите <b>«Realtime Database»</b> -> <b>«Создать базу данных»</b>.</li>
+        <li>Выберите регион (Бельгия / США) и включите <b>«Режим тестирования»</b> (в правилах <code>.read: true, .write: true</code>).</li>
+        <li>Скопируйте ссылку на базу (<code>https://...firebasedatabase.app</code>) и вставьте в поле выше!</li>
+        <li>Нажмите <b>«🧪 Тест связи»</b> и <b>«💾 Сохранить»</b> — синхронизация активируется мгновенно и бесплатно навсегда!</li>
+      </ol>`;
+    } else if (prov === 'supabase') {
+      guideHeader.textContent = '📖 Как настроить бесплатный Supabase за 2 минуты?';
+      guideBody.innerHTML = `<ol>
+        <li>Зайдите на <a href="https://supabase.com/" target="_blank" style="color:var(--primary);font-weight:700;">supabase.com</a> и создайте проект <code>glassloft</code>.</li>
+        <li>В <b>SQL Editor</b> выполните: <code>create table history (id text primary key, data jsonb, timestamp bigint); alter table history enable row level security; create policy "Anon" on history for all using (true) with check (true);</code></li>
+        <li>В <b>Project Settings -> API</b> скопируйте <b>Project URL</b> и <b>anon key</b> и вставьте в поля выше!</li>
+      </ol>`;
+    } else {
+      guideHeader.textContent = '📖 Подключение своего REST API / Webhook';
+      guideBody.innerHTML = `<p>Укажите URL эндпоинта, принимающего <code>GET</code> (выдача списка) и <code>POST / PUT</code> (сохранение смет).</p>`;
+    }
+  }
+}
+
+function updateCloudStatusBar() {
+  const dot = el('cloudStatusDot');
+  const title = el('cloudStatusTitle');
+  const sub = el('cloudStatusSub');
+  const syncBtn = el('cloudSyncNowBtn');
+  const cfg = getCloudConfig();
 
   if (!dot || !title || !sub) return;
 
   dot.className = 'yc-status-dot';
   if (syncBtn) syncBtn.classList.remove('loading');
 
-  if (isYcSyncing) {
+  const hasEndpoint = (cfg.provider === 'firebase' && cfg.fbUrl) ||
+                      (cfg.provider === 'supabase' && cfg.sbUrl) ||
+                      (cfg.provider === 'custom' && cfg.customUrl);
+
+  if (isCloudSyncing) {
     dot.classList.add('syncing');
     if (syncBtn) syncBtn.classList.add('loading');
-    title.innerHTML = '☁️ Яндекс Облако: Синхронизация...';
-    sub.textContent = 'Объединение смет с облачной базой данных...';
+    title.innerHTML = '☁️ Облако: Синхронизация...';
+    sub.textContent = 'Объединение смет с общей базой данных...';
     return;
   }
 
-  if (!cfg.endpoint) {
+  if (!hasEndpoint) {
     dot.classList.remove('connected', 'error', 'syncing');
-    title.innerHTML = '☁️ Яндекс Облако: Локальный режим';
-    sub.textContent = 'Нажмите «Настройки», чтобы включить синхронизацию между всеми устройствами';
+    title.innerHTML = '☁️ Облако: Локальный режим';
+    sub.textContent = 'Нажмите «Настройки», чтобы включить бесплатную синхронизацию (Firebase / Supabase)';
     return;
   }
 
   if (cfg.lastStatus === 'error') {
     dot.classList.add('error');
-    title.innerHTML = '☁️ Яндекс Облако: Ошибка связи';
-    sub.textContent = cfg.lastError ? `Ошибка: ${cfg.lastError} (данные сохранены локально)` : 'Проверьте подключение к интернету или URL функции';
+    title.innerHTML = '☁️ Облако: Ошибка связи';
+    sub.textContent = cfg.lastError ? `Ошибка: ${cfg.lastError} (данные сохранены в телефоне)` : 'Проверьте интернет или настройки базы данных';
     return;
   }
 
   dot.classList.add('connected');
-  title.innerHTML = '🟢 Яндекс Облако: Синхронизировано';
+  const provName = cfg.provider === 'firebase' ? 'Firebase' : (cfg.provider === 'supabase' ? 'Supabase' : 'Облако');
+  title.innerHTML = `🟢 ${provName}: Синхронизировано`;
   if (cfg.lastSyncTime) {
     const d = new Date(cfg.lastSyncTime);
     const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     const dateStr = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-    sub.textContent = `База актуальна (последняя синхронизация: ${dateStr} в ${timeStr})`;
+    sub.textContent = `База актуальна (синхронизировано ${dateStr} в ${timeStr})`;
   } else {
-    sub.textContent = 'Подключено к облачной базе смет GlassLoft';
+    sub.textContent = 'Подключено к общей облачной базе смет GlassLoft';
   }
 }
 
-function openYandexCloudSettingsModal() {
-  const cfg = getYandexCloudConfig();
-  if (el('ycEndpointInput')) el('ycEndpointInput').value = cfg.endpoint;
-  if (el('ycApiKeyInput')) el('ycApiKeyInput').value = cfg.apiKey;
-  if (el('ycAutoSyncToggle')) el('ycAutoSyncToggle').checked = cfg.autoSync !== false;
-  if (el('ycAutoFetchToggle')) el('ycAutoFetchToggle').checked = cfg.autoFetch !== false;
-  const resBox = el('ycTestResult');
+function openCloudSettingsModal() {
+  const cfg = getCloudConfig();
+  currentCloudProvider = cfg.provider || 'firebase';
+  selectCloudProvider(currentCloudProvider);
+
+  if (el('fbDbUrlInput')) el('fbDbUrlInput').value = cfg.fbUrl;
+  if (el('fbApiKeyInput')) el('fbApiKeyInput').value = cfg.fbApiKey;
+  if (el('sbUrlInput')) el('sbUrlInput').value = cfg.sbUrl;
+  if (el('sbApiKeyInput')) el('sbApiKeyInput').value = cfg.sbApiKey;
+  if (el('customUrlInput')) el('customUrlInput').value = cfg.customUrl;
+  if (el('customApiKeyInput')) el('customApiKeyInput').value = cfg.customApiKey;
+
+  if (el('cloudAutoSyncToggle')) el('cloudAutoSyncToggle').checked = cfg.autoSync !== false;
+  if (el('cloudAutoFetchToggle')) el('cloudAutoFetchToggle').checked = cfg.autoFetch !== false;
+  
+  const resBox = el('cloudTestResult');
   if (resBox) {
     resBox.style.display = 'none';
     resBox.innerHTML = '';
   }
-  openModal('yandexCloudSettingsModal');
+  openModal('cloudSettingsModal');
 }
 
-function toggleYcGuide() {
-  const body = el('ycGuideBody');
-  const arrow = el('ycGuideArrow');
+function toggleCloudGuide() {
+  const body = el('cloudGuideBody');
+  const arrow = el('cloudGuideArrow');
   if (!body) return;
   if (body.style.display === 'none' || !body.style.display) {
     body.style.display = 'block';
@@ -3194,57 +3272,104 @@ function toggleYcGuide() {
   }
 }
 
-function saveYandexCloudSettings() {
-  const endpoint = (el('ycEndpointInput') && el('ycEndpointInput').value.trim()) || '';
-  const apiKey = (el('ycApiKeyInput') && el('ycApiKeyInput').value.trim()) || '';
-  const autoSync = el('ycAutoSyncToggle') ? el('ycAutoSyncToggle').checked : true;
-  const autoFetch = el('ycAutoFetchToggle') ? el('ycAutoFetchToggle').checked : true;
+function saveCloudSettings() {
+  const fbUrl = (el('fbDbUrlInput') && el('fbDbUrlInput').value.trim()) || '';
+  const fbApiKey = (el('fbApiKeyInput') && el('fbApiKeyInput').value.trim()) || '';
+  const sbUrl = (el('sbUrlInput') && el('sbUrlInput').value.trim()) || '';
+  const sbApiKey = (el('sbApiKeyInput') && el('sbApiKeyInput').value.trim()) || '';
+  const customUrl = (el('customUrlInput') && el('customUrlInput').value.trim()) || '';
+  const customApiKey = (el('customApiKeyInput') && el('customApiKeyInput').value.trim()) || '';
+  const autoSync = el('cloudAutoSyncToggle') ? el('cloudAutoSyncToggle').checked : true;
+  const autoFetch = el('cloudAutoFetchToggle') ? el('cloudAutoFetchToggle').checked : true;
 
-  setYandexCloudConfig({
-    endpoint: endpoint,
-    apiKey: apiKey,
-    autoSync: autoSync,
-    autoFetch: autoFetch,
-    lastStatus: endpoint ? 'idle' : 'idle',
+  setCloudConfig({
+    provider: currentCloudProvider,
+    fbUrl,
+    fbApiKey,
+    sbUrl,
+    sbApiKey,
+    customUrl,
+    customApiKey,
+    autoSync,
+    autoFetch,
+    lastStatus: 'idle',
     lastError: null
   });
 
-  closeModal('yandexCloudSettingsModal');
-  showToast('Настройки Яндекс Облака сохранены');
+  closeModal('cloudSettingsModal');
+  showToast('Настройки облака сохранены');
 
-  if (endpoint) {
-    syncYandexCloud(false);
+  syncCloudData(false);
+}
+
+// Normalized Endpoint Builder for Provider
+function getActiveCloudEndpointInfo() {
+  const cfg = getCloudConfig();
+  if (cfg.provider === 'firebase') {
+    let raw = cfg.fbUrl.trim();
+    if (!raw) return null;
+    raw = raw.replace(/\/+$/, '');
+    if (!raw.endsWith('.json')) {
+      raw += '/glassloft/history.json';
+    }
+    if (cfg.fbApiKey) {
+      raw += (raw.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(cfg.fbApiKey);
+    }
+    return {
+      provider: 'firebase',
+      url: raw,
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+    };
+  } else if (cfg.provider === 'supabase') {
+    let raw = cfg.sbUrl.trim().replace(/\/+$/, '');
+    if (!raw) return null;
+    const url = `${raw}/rest/v1/history`;
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'apikey': cfg.sbApiKey || '',
+      'Authorization': `Bearer ${cfg.sbApiKey || ''}`,
+      'Prefer': 'return=representation'
+    };
+    return { provider: 'supabase', url, headers };
+  } else {
+    let raw = cfg.customUrl.trim();
+    if (!raw) return null;
+    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+    if (cfg.customApiKey) headers['X-Api-Key'] = cfg.customApiKey;
+    return { provider: 'custom', url: raw, headers };
   }
 }
 
-async function testYandexCloudConnection() {
-  const endpoint = (el('ycEndpointInput') && el('ycEndpointInput').value.trim()) || '';
-  const apiKey = (el('ycApiKeyInput') && el('ycApiKeyInput').value.trim()) || '';
-  const resBox = el('ycTestResult');
+async function testCloudConnection() {
+  const resBox = el('cloudTestResult');
+  const info = getActiveCloudEndpointInfo();
 
-  if (!endpoint) {
+  if (!info || !info.url) {
     if (resBox) {
       resBox.className = 'yc-test-result error';
       resBox.style.display = 'block';
-      resBox.textContent = '⚠️ Введите URL функции или шлюза Яндекс Облака';
+      resBox.textContent = '⚠️ Введите URL базы данных или проекта';
     }
-    return;
+    return false;
   }
 
   if (resBox) {
     resBox.className = 'yc-test-result info';
     resBox.style.display = 'block';
-    resBox.innerHTML = '⏳ Проверка связи с Яндекс Облаком...';
+    resBox.innerHTML = `⏳ Проверка связи с ${info.provider === 'firebase' ? 'Firebase' : (info.provider === 'supabase' ? 'Supabase' : 'облаком')}...`;
   }
 
   const startTime = Date.now();
   try {
-    const headers = { 'Accept': 'application/json' };
-    if (apiKey) headers['X-Api-Key'] = apiKey;
+    let fetchUrl = info.url;
+    if (info.provider === 'supabase') {
+      fetchUrl += '?select=*&limit=50';
+    }
 
-    const res = await fetch(endpoint, {
+    const res = await fetch(fetchUrl, {
       method: 'GET',
-      headers: headers,
+      headers: info.headers,
       cache: 'no-store'
     });
 
@@ -3255,7 +3380,7 @@ async function testYandexCloudConnection() {
       let msg = `Ошибка HTTP ${res.status}`;
       try {
         const parsed = JSON.parse(errText);
-        if (parsed.error) msg += `: ${parsed.error}`;
+        if (parsed.error || parsed.message) msg += `: ${parsed.error || parsed.message}`;
       } catch(e) {}
       if (resBox) {
         resBox.className = 'yc-test-result error';
@@ -3265,68 +3390,77 @@ async function testYandexCloudConnection() {
     }
 
     const data = await res.json();
-    const count = Array.isArray(data) ? data.length : (data.count !== undefined ? data.count : (Array.isArray(data.items) ? data.items.length : 0));
+    let count = 0;
+    if (Array.isArray(data)) {
+      count = data.length;
+    } else if (data && typeof data === 'object') {
+      count = Object.keys(data).length;
+    }
+
     if (resBox) {
       resBox.className = 'yc-test-result success';
-      resBox.innerHTML = `✅ Связь с Яндекс Облаком установлена! Время отклика: ${elapsed} мс.<br>В облачной базе найдено расчётов: <b>${count}</b>`;
+      resBox.innerHTML = `✅ Успешное подключение! Время отклика: ${elapsed} мс.<br>В облачной базе найдено расчётов: <b>${count}</b>`;
     }
     return true;
   } catch(err) {
     const elapsed = Date.now() - startTime;
     if (resBox) {
       resBox.className = 'yc-test-result error';
-      resBox.innerHTML = `❌ Не удалось связаться с сервером (${elapsed} мс): ${err.message || 'Сетевая ошибка или CORS'}`;
+      resBox.innerHTML = `❌ Ошибка подключения (${elapsed} мс): ${err.message || 'Сетевая ошибка'}`;
     }
     return false;
   }
 }
 
-// Smart 2-Way Synchronization Engine
-async function syncYandexCloud(silent = false) {
-  const cfg = getYandexCloudConfig();
-  if (!cfg.endpoint) {
-    if (!silent) openYandexCloudSettingsModal();
+// Smart 2-Way Sync Engine (Firebase / Supabase / REST)
+async function syncCloudData(silent = false) {
+  const info = getActiveCloudEndpointInfo();
+  if (!info || !info.url) {
+    if (!silent) openCloudSettingsModal();
     return;
   }
 
-  if (isYcSyncing) return;
-  isYcSyncing = true;
-  updateYandexCloudStatusBar();
+  if (isCloudSyncing) return;
+  isCloudSyncing = true;
+  updateCloudStatusBar();
 
   try {
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-    if (cfg.apiKey) headers['X-Api-Key'] = cfg.apiKey;
+    // 1. GET Remote
+    let getUrl = info.url;
+    if (info.provider === 'supabase') getUrl += '?select=*';
 
-    // 1. GET remote history
-    const getRes = await fetch(cfg.endpoint, {
+    const getRes = await fetch(getUrl, {
       method: 'GET',
-      headers: headers,
+      headers: info.headers,
       cache: 'no-store'
     });
 
     if (!getRes.ok) {
-      throw new Error(`Ошибка HTTP ${getRes.status}`);
+      throw new Error(`HTTP ${getRes.status}`);
     }
 
-    const remoteData = await getRes.json();
-    const remoteList = Array.isArray(remoteData) ? remoteData : (remoteData.items || []);
+    const remoteRaw = await getRes.json();
+    let remoteList = [];
 
-    // 2. Local history
+    if (Array.isArray(remoteRaw)) {
+      if (info.provider === 'supabase') {
+        remoteList = remoteRaw.map(r => r.data || r).filter(Boolean);
+      } else {
+        remoteList = remoteRaw.filter(Boolean);
+      }
+    } else if (remoteRaw && typeof remoteRaw === 'object') {
+      remoteList = Object.values(remoteRaw).filter(Boolean);
+    }
+
+    // 2. Local List
     const localList = getSavedHistory();
 
-    // 3. Smart 2-Way Merge by ID and timestamp
+    // 3. Smart Merge
     const mergedMap = new Map();
-
     localList.forEach(item => {
-      if (item && item.id) {
-        mergedMap.set(item.id, item);
-      }
+      if (item && item.id) mergedMap.set(item.id, item);
     });
 
-    let newFromRemoteCount = 0;
     remoteList.forEach(remItem => {
       if (!remItem || !remItem.id) return;
       if (mergedMap.has(remItem.id)) {
@@ -3338,7 +3472,6 @@ async function syncYandexCloud(silent = false) {
         }
       } else {
         mergedMap.set(remItem.id, remItem);
-        newFromRemoteCount++;
       }
     });
 
@@ -3346,30 +3479,37 @@ async function syncYandexCloud(silent = false) {
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       .slice(0, MAX_HISTORY_ITEMS);
 
-    // Save to local storage without triggering recursive sync
+    // Save locally
     try {
       localStorage.setItem('glassloft_calc_history_v1', JSON.stringify(finalMerged));
     } catch(e) {}
     updateHistoryBadge();
     renderHistoryList();
 
-    // 4. PUT / POST merged list back to Yandex Cloud
-    try {
-      const postRes = await fetch(cfg.endpoint, {
-        method: 'POST',
-        headers: headers,
+    // 4. PUT / POST merged list to Cloud
+    if (info.provider === 'firebase') {
+      await fetch(info.url, {
+        method: 'PUT',
+        headers: info.headers,
         body: JSON.stringify(finalMerged)
       });
-      if (!postRes.ok) {
-        await fetch(cfg.endpoint, {
-          method: 'PUT',
-          headers: headers,
-          body: JSON.stringify(finalMerged)
+    } else if (info.provider === 'supabase') {
+      for (const item of finalMerged) {
+        await fetch(info.url, {
+          method: 'POST',
+          headers: Object.assign({}, info.headers, { 'Prefer': 'resolution=merge-duplicates' }),
+          body: JSON.stringify({ id: item.id, data: item, timestamp: item.timestamp || Date.now() })
         });
       }
-    } catch(e) {}
+    } else {
+      await fetch(info.url, {
+        method: 'POST',
+        headers: info.headers,
+        body: JSON.stringify(finalMerged)
+      });
+    }
 
-    setYandexCloudConfig({
+    setCloudConfig({
       lastSyncTime: Date.now(),
       lastStatus: 'success',
       lastError: null
@@ -3379,7 +3519,7 @@ async function syncYandexCloud(silent = false) {
       showToast(`Синхронизировано: ${finalMerged.length} смет в общей базе`);
     }
   } catch(err) {
-    setYandexCloudConfig({
+    setCloudConfig({
       lastStatus: 'error',
       lastError: err.message || 'Ошибка сети'
     });
@@ -3387,74 +3527,87 @@ async function syncYandexCloud(silent = false) {
       showToast(`Ошибка синхронизации: ${err.message || 'Сетевая ошибка'}`);
     }
   } finally {
-    isYcSyncing = false;
-    updateYandexCloudStatusBar();
+    isCloudSyncing = false;
+    updateCloudStatusBar();
   }
 }
 
-// Direct Pull from Cloud
-async function pullFromYandexCloudDirect() {
-  const cfg = getYandexCloudConfig();
-  if (!cfg.endpoint) {
-    showToast('Сначала укажите URL функции Яндекс Облака');
+async function pullFromCloudDirect() {
+  const info = getActiveCloudEndpointInfo();
+  if (!info || !info.url) {
+    showToast('Сначала укажите URL базы данных');
     return;
   }
   try {
-    const headers = { 'Accept': 'application/json' };
-    if (cfg.apiKey) headers['X-Api-Key'] = cfg.apiKey;
-
-    const res = await fetch(cfg.endpoint, { method: 'GET', headers: headers, cache: 'no-store' });
+    let getUrl = info.url;
+    if (info.provider === 'supabase') getUrl += '?select=*';
+    const res = await fetch(getUrl, { method: 'GET', headers: info.headers, cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const items = Array.isArray(data) ? data : (data.items || []);
-    if (items.length === 0) {
+    let list = [];
+    if (Array.isArray(data)) {
+      list = (info.provider === 'supabase') ? data.map(d => d.data || d) : data;
+    } else if (data && typeof data === 'object') {
+      list = Object.values(data);
+    }
+    list = list.filter(Boolean);
+    if (list.length === 0) {
       showToast('В облаке пока нет сохранённых расчётов');
       return;
     }
-    saveHistoryList(items, true);
+    saveHistoryList(list, true);
     renderHistoryList();
-    closeModal('yandexCloudSettingsModal');
-    showToast(`Загружено ${items.length} расчётов из Яндекс Облака`);
+    closeModal('cloudSettingsModal');
+    showToast(`Загружено ${list.length} смет из облака`);
   } catch(err) {
     showToast(`Ошибка: ${err.message}`);
   }
 }
 
-// Direct Push to Cloud
-async function pushToYandexCloudDirect() {
-  const cfg = getYandexCloudConfig();
-  if (!cfg.endpoint) {
-    showToast('Сначала укажите URL функции Яндекс Облака');
+async function pushToCloudDirect() {
+  const info = getActiveCloudEndpointInfo();
+  if (!info || !info.url) {
+    showToast('Сначала укажите URL базы данных');
     return;
   }
   const localItems = getSavedHistory();
   try {
-    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-    if (cfg.apiKey) headers['X-Api-Key'] = cfg.apiKey;
-
-    const res = await fetch(cfg.endpoint, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(localItems)
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    setYandexCloudConfig({ lastSyncTime: Date.now(), lastStatus: 'success', lastError: null });
-    closeModal('yandexCloudSettingsModal');
-    showToast(`Выгружено ${localItems.length} смет в Яндекс Облако`);
+    if (info.provider === 'firebase') {
+      const res = await fetch(info.url, { method: 'PUT', headers: info.headers, body: JSON.stringify(localItems) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } else if (info.provider === 'supabase') {
+      for (const item of localItems) {
+        await fetch(info.url, {
+          method: 'POST',
+          headers: Object.assign({}, info.headers, { 'Prefer': 'resolution=merge-duplicates' }),
+          body: JSON.stringify({ id: item.id, data: item, timestamp: item.timestamp || Date.now() })
+        });
+      }
+    } else {
+      const res = await fetch(info.url, { method: 'POST', headers: info.headers, body: JSON.stringify(localItems) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    }
+    setCloudConfig({ lastSyncTime: Date.now(), lastStatus: 'success', lastError: null });
+    closeModal('cloudSettingsModal');
+    showToast(`Выгружено ${localItems.length} смет в облако`);
   } catch(err) {
     showToast(`Ошибка: ${err.message}`);
   }
 }
 
-function initYandexCloudSync() {
-  updateYandexCloudStatusBar();
-  const cfg = getYandexCloudConfig();
-  if (cfg.endpoint && cfg.autoFetch) {
+function initCloudSync() {
+  updateCloudStatusBar();
+  const cfg = getCloudConfig();
+  const hasEndpoint = (cfg.provider === 'firebase' && cfg.fbUrl) ||
+                      (cfg.provider === 'supabase' && cfg.sbUrl) ||
+                      (cfg.provider === 'custom' && cfg.customUrl);
+  if (hasEndpoint && cfg.autoFetch) {
     setTimeout(() => {
-      syncYandexCloud(true);
+      syncCloudData(true);
     }, 1200);
   }
 }
+
 
 /* --- Init --- */
 function init() {
@@ -3473,7 +3626,7 @@ function init() {
   calc();
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
-  initYandexCloudSync();
+  initCloudSync();
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('./sw.js?v=4.6').then(reg => {

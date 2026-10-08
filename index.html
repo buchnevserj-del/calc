@@ -7,10 +7,10 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>GlassLoft — Калькулятор стеклянных конструкций</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg?v=4.6">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=4.6">
-<link rel="apple-touch-icon" href="icon-192.png?v=4.6">
-<link rel="manifest" href="manifest.json?v=4.6">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=4.7">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=4.7">
+<link rel="apple-touch-icon" href="icon-192.png?v=4.7">
+<link rel="manifest" href="manifest.json?v=4.7">
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.5">
+<link rel="stylesheet" href="style.css?v=4.7">
 </head>
 <body>
 <div class="wrap">
@@ -491,21 +491,21 @@
     </div>
   </div>
 
-  <!-- Yandex Cloud Sync Bar -->
-  <div class="yc-sync-status-bar" id="ycStatusBar">
+  <!-- Cloud Sync Bar -->
+  <div class="yc-sync-status-bar" id="cloudStatusBar">
     <div class="yc-status-info">
-      <span class="yc-status-dot" id="ycStatusDot"></span>
+      <span class="yc-status-dot" id="cloudStatusDot"></span>
       <div class="yc-status-text-wrap">
-        <div class="yc-status-title" id="ycStatusTitle">☁️ Яндекс Облако: Локальный режим</div>
-        <div class="yc-status-sub" id="ycStatusSub">Нажмите «Настроить», чтобы включить синхронизацию между всеми устройствами</div>
+        <div class="yc-status-title" id="cloudStatusTitle">☁️ Облако: Локальный режим</div>
+        <div class="yc-status-sub" id="cloudStatusSub">Нажмите «Настройки», чтобы включить бесплатную синхронизацию (Firebase / Supabase)</div>
       </div>
     </div>
     <div class="yc-status-actions">
-      <button type="button" class="btn ghost btn-sm yc-sync-btn" id="ycSyncNowBtn" onclick="syncYandexCloud(false)" title="Синхронизировать историю с Яндекс Облаком">
+      <button type="button" class="btn ghost btn-sm yc-sync-btn" id="cloudSyncNowBtn" onclick="syncCloudData(false)" title="Синхронизировать историю с облаком">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
         <span>Синхронизировать</span>
       </button>
-      <button type="button" class="btn ghost btn-sm" onclick="openYandexCloudSettingsModal()" title="Настройки подключения к Яндекс Облаку">
+      <button type="button" class="btn ghost btn-sm" onclick="openCloudSettingsModal()" title="Настройки бесплатного облака (Firebase / Supabase)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         <span>Настройки</span>
       </button>
@@ -529,39 +529,77 @@
   </div>
 </div></div>
 
-<!-- Yandex Cloud Settings Modal (PIN Protected) -->
-<div class="modal" id="yandexCloudSettingsModal"><div class="mbox yc-settings-box">
-  <span class="close" onclick="closeModal('yandexCloudSettingsModal')">&times;</span>
+<!-- Free Cloud Settings Modal (Firebase / Supabase) -->
+<div class="modal" id="cloudSettingsModal"><div class="mbox yc-settings-box">
+  <span class="close" onclick="closeModal('cloudSettingsModal')">&times;</span>
   <div class="yc-modal-header">
     <div class="yc-icon-badge">☁️</div>
     <div>
-      <h3>Синхронизация с Яндекс Облаком</h3>
-      <p class="yc-modal-sub">Единая база смет GlassLoft на смартфонах и компьютерах</p>
+      <h3>Бесплатная облачная синхронизация</h3>
+      <p class="yc-modal-sub">Единая база смет GlassLoft на телефонах и компьютерах (100% бесплатно)</p>
     </div>
   </div>
 
-  <div class="yc-form-group">
-    <label class="yc-label">URL функции / шлюза Яндекс Облака:</label>
-    <input type="url" id="ycEndpointInput" class="yc-input" placeholder="https://functions.yandexcloud.net/d4e..." autocomplete="off">
-    <span class="yc-hint">Ссылка на HTTP-триггер функции Yandex Cloud Functions или API Gateway</span>
+  <!-- Provider Selector Tabs -->
+  <div class="cloud-provider-tabs">
+    <button type="button" class="cloud-tab active" id="tabProviderFirebase" onclick="selectCloudProvider('firebase')">
+      <span>🔥 Firebase (Рекомендуется)</span>
+    </button>
+    <button type="button" class="cloud-tab" id="tabProviderSupabase" onclick="selectCloudProvider('supabase')">
+      <span>⚡ Supabase</span>
+    </button>
+    <button type="button" class="cloud-tab" id="tabProviderCustom" onclick="selectCloudProvider('custom')">
+      <span>🌐 Custom REST</span>
+    </button>
   </div>
 
-  <div class="yc-form-group">
-    <label class="yc-label">Секретный API-ключ компании (опционально):</label>
-    <input type="password" id="ycApiKeyInput" class="yc-input" placeholder="Введите API ключ (если включена авторизация)" autocomplete="off">
-    <span class="yc-hint">Используется в заголовке X-Api-Key для защиты данных от посторонних</span>
+  <!-- Firebase Fields -->
+  <div id="fieldsProviderFirebase" class="provider-fields">
+    <div class="yc-form-group">
+      <label class="yc-label">Ссылка на Firebase Realtime Database:</label>
+      <input type="url" id="fbDbUrlInput" class="yc-input" placeholder="https://your-project-default-rtdb.europe-west1.firebasedatabase.app" autocomplete="off">
+      <span class="yc-hint">Создаётся бесплатно в <a href="https://console.firebase.google.com/" target="_blank" style="color:var(--primary);font-weight:700;">console.firebase.google.com</a> за 2 минуты (без привязки карты)</span>
+    </div>
+    <div class="yc-form-group">
+      <label class="yc-label">Секретный ключ / Auth Token (опционально):</label>
+      <input type="password" id="fbApiKeyInput" class="yc-input" placeholder="Оставьте пустым, если режим тестирования" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- Supabase Fields -->
+  <div id="fieldsProviderSupabase" class="provider-fields" style="display:none;">
+    <div class="yc-form-group">
+      <label class="yc-label">Supabase Project URL:</label>
+      <input type="url" id="sbUrlInput" class="yc-input" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off">
+    </div>
+    <div class="yc-form-group">
+      <label class="yc-label">Supabase anon public API Key:</label>
+      <input type="password" id="sbApiKeyInput" class="yc-input" placeholder="eyJhbGciOi..." autocomplete="off">
+    </div>
+  </div>
+
+  <!-- Custom REST Fields -->
+  <div id="fieldsProviderCustom" class="provider-fields" style="display:none;">
+    <div class="yc-form-group">
+      <label class="yc-label">URL HTTP-эндпоинта:</label>
+      <input type="url" id="customUrlInput" class="yc-input" placeholder="https://..." autocomplete="off">
+    </div>
+    <div class="yc-form-group">
+      <label class="yc-label">API Key / Заголовок авторизации (опционально):</label>
+      <input type="password" id="customApiKeyInput" class="yc-input" placeholder="API ключ" autocomplete="off">
+    </div>
   </div>
 
   <div class="yc-toggles-grid">
     <label class="yc-toggle-item">
-      <input type="checkbox" id="ycAutoSyncToggle" checked>
+      <input type="checkbox" id="cloudAutoSyncToggle" checked>
       <div>
         <strong>Авто-синхронизация при сохранении сметы</strong>
-        <span>Автоматически отправлять расчёт в Яндекс Облако при создании и правке</span>
+        <span>Отправлять смету в облако сразу при создании/правке</span>
       </div>
     </label>
     <label class="yc-toggle-item">
-      <input type="checkbox" id="ycAutoFetchToggle" checked>
+      <input type="checkbox" id="cloudAutoFetchToggle" checked>
       <div>
         <strong>Авто-проверка при запуске калькулятора</strong>
         <span>Подтягивать свежие сметы коллег с других устройств при открытии</span>
@@ -569,28 +607,28 @@
     </label>
   </div>
 
-  <div class="yc-test-result" id="ycTestResult" style="display:none;"></div>
+  <div class="yc-test-result" id="cloudTestResult" style="display:none;"></div>
 
   <div class="yc-actions-row">
-    <button type="button" class="btn ghost btn-sm" onclick="testYandexCloudConnection()">🧪 Тест связи</button>
-    <button type="button" class="btn ghost btn-sm" onclick="pullFromYandexCloudDirect()">📥 Скачать всё из облака</button>
-    <button type="button" class="btn ghost btn-sm" onclick="pushToYandexCloudDirect()">📤 Отправить локальные в облако</button>
-    <button type="button" class="btn b-primary btn-sm" onclick="saveYandexCloudSettings()">💾 Сохранить</button>
+    <button type="button" class="btn ghost btn-sm" onclick="testCloudConnection()">🧪 Тест связи</button>
+    <button type="button" class="btn ghost btn-sm" onclick="pullFromCloudDirect()">📥 Скачать из облака</button>
+    <button type="button" class="btn ghost btn-sm" onclick="pushToCloudDirect()">📤 Выгрузить в облако</button>
+    <button type="button" class="btn b-primary btn-sm" onclick="saveCloudSettings()">💾 Сохранить</button>
   </div>
 
   <!-- Quick Guide Accordion -->
   <div class="yc-guide-card">
-    <div class="yc-guide-header" onclick="toggleYcGuide()">
-      <span>📖 Как подключить Яндекс Облако за 2 минуты?</span>
-      <span id="ycGuideArrow">▼</span>
+    <div class="yc-guide-header" onclick="toggleCloudGuide()">
+      <span>📖 Как настроить бесплатный Firebase за 2 минуты?</span>
+      <span id="cloudGuideArrow">▼</span>
     </div>
-    <div class="yc-guide-body" id="ycGuideBody" style="display:none;">
+    <div class="yc-guide-body" id="cloudGuideBody" style="display:none;">
       <ol>
-        <li>Зайдите в консоль <a href="https://console.cloud.yandex.ru/" target="_blank" style="color:var(--primary);font-weight:700;">console.cloud.yandex.ru</a> под своим Яндекс аккаунтом.</li>
-        <li>В разделе <b>Object Storage</b> создайте бакет <code>glassloft-calc-storage</code>.</li>
-        <li>В разделе <b>Cloud Functions</b> создайте бессерверную функцию <code>glassloft-sync</code> (Python 3.11 или Node.js).</li>
-        <li>Вставьте готовый код из файла <code>yandex_cloud_function.py</code> в редактор функции.</li>
-        <li>Включите переключатель <b>«Публичная функция»</b>, скопируйте ссылку функции и вставьте в поле выше!</li>
+        <li>Откройте <a href="https://console.firebase.google.com/" target="_blank" style="color:var(--primary);font-weight:700;">console.firebase.google.com</a> под Google-аккаунтом и нажмите <b>«Создать проект»</b> (например, <code>glassloft-calc</code>).</li>
+        <li>В левом меню выберите <b>«Realtime Database»</b> -> <b>«Создать базу данных»</b>.</li>
+        <li>Выберите регион (Бельгия / США) и включите <b>«Режим тестирования»</b> (в правилах <code>.read: true, .write: true</code>).</li>
+        <li>Скопируйте ссылку на базу (<code>https://...firebasedatabase.app</code>) и вставьте в поле выше!</li>
+        <li>Нажмите <b>«🧪 Тест связи»</b> и <b>«💾 Сохранить»</b> — синхронизация активируется мгновенно и бесплатно навсегда!</li>
       </ol>
     </div>
   </div>
