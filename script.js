@@ -3081,9 +3081,9 @@ function saveAll() {
   saveCurrentToHistory(true);
 }
 
-const APP_VERSION = 'v4.5.260926';
-const APP_BUILD_NUM = '#60';
-const APP_BUILD_DATE = '26.09.2026';
+const APP_VERSION = 'v5.2.091026';
+const APP_BUILD_NUM = '#61';
+const APP_BUILD_DATE = '09.10.2026';
 
 function updateVersionBadge() {
   const versionTextEl = el('appVersionText');
@@ -3093,7 +3093,7 @@ function updateVersionBadge() {
 }
 
 async function forceAppUpdate() {
-  showToast('Сброс кэша и загрузка версии v4.5... ⏳');
+  showToast('Сброс кэша и загрузка последней версии... ⏳');
   try {
     if ('caches' in window) {
       const keys = await caches.keys();
@@ -4081,6 +4081,18 @@ async function finalizePdfImport(rec, okMsg) {
     renderHistoryList();
   }
   setTimeout(() => showToast(okMsg), 400);
+}
+
+function onPdfImportClick() {
+  if (typeof pdfjsLib === 'undefined') {
+    showToast('Модуль чтения PDF не загрузился. Нажмите «🔄 Обновить приложение» и попробуйте ещё раз.');
+    return;
+  }
+  const inp = el('pdfFileInput');
+  if (!inp) { showToast('Ошибка интерфейса: поле выбора файла не найдено.'); return; }
+  inp.value = '';
+  showToast('📂 Выберите PDF-файл со сметой GlassLoft');
+  try { inp.click(); } catch (e) { showToast('Браузер заблокировал открытие файла: ' + e.message); }
 }
 
 let pdfImportBusy = false;
