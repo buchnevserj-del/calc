@@ -3081,8 +3081,8 @@ function saveAll() {
   saveCurrentToHistory(true);
 }
 
-const APP_VERSION = 'v5.4.091026';
-const APP_BUILD_NUM = '#63';
+const APP_VERSION = 'v5.5.091026';
+const APP_BUILD_NUM = '#64';
 const APP_BUILD_DATE = '09.10.2026';
 
 function updateVersionBadge() {
@@ -3843,7 +3843,8 @@ function matchGlassKey(cat, glassName) {
 }
 
 function fmtNum(n) {
-  return (Math.round(n * 100) / 100).toFixed(2).replace('.', ',');
+  // ВАЖНО: только точка — <input type="number"> стирает значения с запятой
+  return String(Math.round(n * 100) / 100);
 }
 
 // Разбор текстового слоя старого/чужого PDF в запись истории
