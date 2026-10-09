@@ -2059,6 +2059,31 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
+/* --- Реестр удалённых смет (синхронизируется с облаком, чтобы удаление не воскресало) --- */
+const DELETED_HISTORY_KEY = 'glassloft_history_deleted_v2';
+const CLOUD_REGISTRY_ID = '_deleted_registry';
+
+function getDeletedIdsMap() {
+  try {
+    const m = JSON.parse(localStorage.getItem(DELETED_HISTORY_KEY));
+    return (m && typeof m === 'object') ? m : {};
+  } catch(e) { return {}; }
+}
+
+function saveDeletedIdsMap(map) {
+  const entries = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 300);
+  const obj = {};
+  entries.forEach(([k, v]) => { obj[k] = v; });
+  try { localStorage.setItem(DELETED_HISTORY_KEY, JSON.stringify(obj)); } catch(e) {}
+}
+
+function markDeletedId(id) {
+  if (!id) return;
+  const m = getDeletedIdsMap();
+  m[id] = Date.now();
+  saveDeletedIdsMap(m);
+}
+
 /* --- Calculations History System (Max 40 entries, Protected by PIN) --- */
 const MAX_HISTORY_ITEMS = 40;
 let activeEditingHistoryId = null;
@@ -2071,7 +2096,8 @@ function getSavedHistory() {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) {
-        return parsed.filter(item => item && typeof item === 'object' && item.id);
+        const deleted = getDeletedIdsMap();
+        return parsed.filter(item => item && typeof item === 'object' && item.id && item.id !== CLOUD_REGISTRY_ID && !deleted[item.id]);
       }
     }
   } catch(e) {}
@@ -2085,9 +2111,9 @@ function saveHistoryList(list, skipSync = false) {
   updateHistoryBadge();
   if (!skipSync) {
     try {
-      const cfg = getYandexCloudConfig();
-      if (cfg.endpoint && cfg.autoSync) {
-        syncYandexCloud(true);
+      const cfg = getCloudConfig();
+      if (cfg && cfg.autoSync && getActiveCloudEndpointInfo()) {
+        syncCloudData(true);
       }
     } catch(e) {}
   }
@@ -2645,20 +2671,22 @@ function deleteHistoryItem(id, event) {
     event.stopPropagation();
     event.preventDefault();
   }
+  markDeletedId(id);
   let history = getSavedHistory();
   history = history.filter(h => h.id !== id);
   saveHistoryList(history);
   renderHistoryList();
-  showToast('Расчёт удалён из истории');
+  showToast('Расчёт удалён из истории (и из облака при синхронизации) 🗑');
 }
 
 function clearAllHistory() {
   const history = getSavedHistory();
   if (history.length === 0) return;
   if (confirm('Вы действительно хотите полностью очистить историю всех расчётов?')) {
+    history.forEach(h => markDeletedId(h.id));
     saveHistoryList([]);
     renderHistoryList();
-    showToast('История расчётов очищена');
+    showToast('История расчётов очищена (и в облаке при синхронизации) 🗑');
   }
 }
 
@@ -3081,9 +3109,9 @@ function saveAll() {
   saveCurrentToHistory(true);
 }
 
-const APP_VERSION = 'v5.5.091026';
-const APP_BUILD_NUM = '#64';
-const APP_BUILD_DATE = '09.10.2026';
+const APP_VERSION = 'v5.6.101026';
+const APP_BUILD_NUM = '#65';
+const APP_BUILD_DATE = '10.10.2026';
 
 function updateVersionBadge() {
   const versionTextEl = el('appVersionText');
@@ -3469,7 +3497,7 @@ async function testCloudConnection() {
     const data = await res.json();
     let count = 0;
     if (Array.isArray(data)) {
-      count = data.length;
+      count = data.filter(r => !r || r.id !== CLOUD_REGISTRY_ID).length;
     } else if (data && typeof data === 'object') {
       count = Object.keys(data).length;
     }
@@ -3487,6 +3515,56 @@ async function testCloudConnection() {
     }
     return false;
   }
+}
+
+// Записывает реестр удалений в облако и физически удаляет помеченные строки
+async function pushCloudDeletions(info) {
+  const T = getDeletedIdsMap();
+  try {
+    if (info.provider === 'supabase') {
+      // 1) реестр удалений как отдельная строка
+      await fetch(info.url, {
+        method: 'POST',
+        headers: info.headers,
+        body: JSON.stringify([{ id: CLOUD_REGISTRY_ID, data: { deleted: T }, timestamp: Date.now() }])
+      });
+      // 2) физическое удаление строк по tombstones
+      const ids = Object.keys(T);
+      if (ids.length > 0) {
+        const inList = ids.map(encodeURIComponent).join(',');
+        await fetch(`${info.url}?id=in.(${inList})`, { method: 'DELETE', headers: info.headers });
+      }
+    } else if (info.provider === 'firebase') {
+      const regUrl = info.url.replace(/\/history\.json/, '/deleted.json');
+      await fetch(regUrl, { method: 'PUT', headers: info.headers, body: JSON.stringify(T) });
+    }
+    // custom: реестр поедет вместе с основным массивом (см. syncCloudData)
+  } catch(e) {
+    console.warn('pushCloudDeletions:', e);
+  }
+}
+
+// Читает реестр удалений из облака (нужен только firebase-custom: у supabase он приезжает в общем списке)
+async function fetchRemoteDeletedRegistry(info) {
+  try {
+    if (info.provider === 'firebase') {
+      const regUrl = info.url.replace(/\/history\.json/, '/deleted.json');
+      const res = await fetch(regUrl, { method: 'GET', headers: info.headers, cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        return (data && typeof data === 'object') ? data : {};
+      }
+    }
+  } catch(e) {}
+  return {};
+}
+
+function mergeDeletedMaps(a, b) {
+  const out = Object.assign({}, a);
+  Object.keys(b || {}).forEach(id => {
+    if (!out[id] || (b[id] || 0) > (out[id] || 0)) out[id] = b[id];
+  });
+  return out;
 }
 
 // Smart 2-Way Sync Engine (Firebase / Supabase / REST)
@@ -3518,19 +3596,38 @@ async function syncCloudData(silent = false) {
 
     const remoteRaw = await getRes.json();
     let remoteList = [];
+    let remoteDeleted = {};
 
     if (Array.isArray(remoteRaw)) {
       if (info.provider === 'supabase') {
-        remoteList = remoteRaw.map(r => r.data || r).filter(Boolean);
+        const regRow = remoteRaw.find(r => r && r.id === CLOUD_REGISTRY_ID);
+        if (regRow && regRow.data && regRow.data.deleted) remoteDeleted = regRow.data.deleted;
+        remoteList = remoteRaw.filter(r => r && r.id !== CLOUD_REGISTRY_ID).map(r => r.data || r).filter(Boolean);
       } else {
         remoteList = remoteRaw.filter(Boolean);
       }
     } else if (remoteRaw && typeof remoteRaw === 'object') {
       remoteList = Object.values(remoteRaw).filter(Boolean);
     }
+    // реестр мог приехать элементом массива (custom provider)
+    const regItem = remoteList.find(it => it && (it.id === CLOUD_REGISTRY_ID || (it.deleted && typeof it.deleted === 'object')));
+    if (regItem) {
+      remoteDeleted = mergeDeletedMaps(remoteDeleted, regItem.deleted || {});
+      remoteList = remoteList.filter(it => it !== regItem);
+    }
+    if (info.provider === 'firebase') {
+      remoteDeleted = mergeDeletedMaps(remoteDeleted, await fetchRemoteDeletedRegistry(info));
+    }
+
+    // Объединённый реестр удалений (локальный + облачный)
+    const T = mergeDeletedMaps(getDeletedIdsMap(), remoteDeleted);
+    saveDeletedIdsMap(T);
+
+    // Отсекаем «могильные» записи с обеих сторон — они больше нигде не воскреснут
+    remoteList = remoteList.filter(it => it && it.id && it.id !== CLOUD_REGISTRY_ID && !T[it.id]);
 
     // 2. Local List
-    const localList = getSavedHistory();
+    const localList = getSavedHistory().filter(it => it && it.id && !T[it.id]);
 
     // 3. Smart Merge by ID and timestamp
     const mergedMap = new Map();
@@ -3563,6 +3660,9 @@ async function syncCloudData(silent = false) {
     updateHistoryBadge();
     renderHistoryList();
 
+    // 3b. Сначала — удаления: реестр в облако + физическое удаление строк
+    await pushCloudDeletions(info);
+
     // 4. PUT / POST merged list to Cloud
     if (info.provider === 'firebase') {
       await fetch(info.url, {
@@ -3585,6 +3685,7 @@ async function syncCloudData(silent = false) {
         });
       }
     } else {
+      finalMerged.push({ id: CLOUD_REGISTRY_ID, deleted: T });
       await fetch(info.url, {
         method: 'POST',
         headers: info.headers,
@@ -3634,6 +3735,22 @@ async function pullFromCloudDirect() {
       list = Object.values(data);
     }
     list = list.filter(Boolean);
+    // Учитываем реестр удалений (удалённое не воскресает)
+    let T = getDeletedIdsMap();
+    const reg = list.find(it => it && (it.id === CLOUD_REGISTRY_ID || (it.deleted && typeof it.deleted === 'object')));
+    if (reg) {
+      T = mergeDeletedMaps(T, reg.deleted || (reg.data && reg.data.deleted) || {});
+      list = list.filter(it => it !== reg);
+    }
+    if (info.provider === 'firebase') {
+      T = mergeDeletedMaps(T, await fetchRemoteDeletedRegistry(info));
+    }
+    saveDeletedIdsMap(T);
+    if (info.provider === 'supabase') {
+      const regRow = (Array.isArray(data) ? data : []).find(r => r && r.id === CLOUD_REGISTRY_ID);
+      if (regRow && regRow.data && regRow.data.deleted) { T = mergeDeletedMaps(T, regRow.data.deleted); saveDeletedIdsMap(T); }
+    }
+    list = list.filter(it => it && it.id && it.id !== CLOUD_REGISTRY_ID && !T[it.id]);
     if (list.length === 0) {
       showToast('В облаке пока нет сохранённых расчётов');
       return;
@@ -3655,6 +3772,7 @@ async function pushToCloudDirect() {
   }
   const localItems = getSavedHistory();
   try {
+    await pushCloudDeletions(info);
     if (info.provider === 'firebase') {
       const res = await fetch(info.url, { method: 'PUT', headers: info.headers, body: JSON.stringify(localItems) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
