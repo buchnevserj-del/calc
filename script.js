@@ -2997,7 +2997,7 @@ function resetCalculatorToZero() {
         name: "Лестничное ограждение",
         trapLen: "", rectLen: "", trapArea: "", rectArea: "",
         glass: Object.keys(D.railings.glass)[0],
-        hardQty: {}, hardSum: {},
+        hardQty: {}, hardSum: {}, glassManual: '',
         railSelect: "Без поручня", railLength: "", railManual: "",
         instOn: true, instMode: "fix", instFix: 35000, instPct: 30
       }
@@ -3008,7 +3008,7 @@ function resetCalculatorToZero() {
         name: "Балконное ограждение",
         length: "", heightMm: "1000",
         glass: Object.keys(D.balconies.glass)[0],
-        hardQty: {}, hardSum: {},
+        hardQty: {}, hardSum: {}, glassManual: '',
         railSelect: "Без поручня", railLength: "", railManual: "",
         instOn: true, instMode: "fix", instFix: 35000, instPct: 30
       }
@@ -3019,7 +3019,7 @@ function resetCalculatorToZero() {
         name: "Душевое ограждение",
         fixedArea: "", doorArea: "",
         glass: Object.keys(D.showers.glass)[0],
-        hardQty: {}, hardSum: {},
+        hardQty: {}, hardSum: {}, glassManual: '',
         instOn: true, instMode: "fix", instFix: 15000, instPct: 30
       }
     ],
@@ -3029,7 +3029,7 @@ function resetCalculatorToZero() {
         name: "Лофт-перегородка",
         area: "", profileLen: "", gridLen: "",
         glass: Object.keys(D.loft.glass)[0],
-        hardQty: {}, hardSum: {},
+        hardQty: {}, hardSum: {}, glassManual: '',
         instOn: true, instMode: "fix", instFix: 25000, instPct: 30
       }
     ]
@@ -3072,6 +3072,8 @@ function resetCalculatorToZero() {
   } catch(e) {}
 
   showToast('Все расчёты и поля сброшены до нуля! 🔄');
+  // Перезагрузка — гарантированно показывает чистую страницу, сбрасывая любые битые состояния DOM
+  setTimeout(() => { try { location.reload(); } catch(e) {} }, 600);
 }
 
 function delGlass(name) {
@@ -3142,9 +3144,33 @@ function saveAll() {
   saveCurrentToHistory(true);
 }
 
-const APP_VERSION = 'v5.8.101026';
-const APP_BUILD_NUM = '#67';
-const APP_BUILD_DATE = '10.10.2026';
+const APP_VERSION = 'v5.9.111026';
+const APP_BUILD_NUM = '#68';
+const APP_BUILD_DATE = '11.10.2026';
+
+// Самолечение приложения: если на сервере новее сборка — чистим кэш и перезагружаемся автоматически
+async function checkAppVersionHealth() {
+  try {
+    const res = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const v = await res.json();
+    if (v && v.build && v.build !== APP_BUILD_NUM) {
+      console.warn('GlassLoft: на сервере сборка', v.build, 'локально', APP_BUILD_NUM, '— авто-обновление');
+      try { showToast('Загружаю актуальную версию приложения... ⏳', true); } catch(e) {}
+      try {
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+        if (navigator.serviceWorker) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+      } catch(e) {}
+      setTimeout(() => { try { location.reload(); } catch(e) {} }, 900);
+    }
+  } catch(e) {}
+}
 
 function updateVersionBadge() {
   const versionTextEl = el('appVersionText');
@@ -3177,23 +3203,7 @@ async function forceAppUpdate() {
 }
 
 
-function saveHistoryList(list, skipSync = false) {
-  try {
-    localStorage.setItem('glassloft_calc_history_v1', JSON.stringify(list.slice(0, MAX_HISTORY_ITEMS)));
-  } catch(e) {}
-  updateHistoryBadge();
-  if (!skipSync) {
-    try {
-      const cfg = getCloudConfig();
-      const hasEndpoint = (cfg.provider === 'firebase' && cfg.fbUrl) ||
-                          (cfg.provider === 'supabase' && cfg.sbUrl) ||
-                          (cfg.provider === 'custom' && cfg.customUrl);
-      if (hasEndpoint && cfg.autoSync) {
-        syncCloudData(true);
-      }
-    } catch(e) {}
-  }
-}
+
 
 /* ==========================================================================
    Universal Free Cloud Synchronization Module (Firebase / Supabase / REST)
@@ -3873,6 +3883,7 @@ function init() {
   fetchCurrentSequenceNumber().then(num => updateKpDocumentData(num, false));
 
   initCloudSync();
+  checkAppVersionHealth();
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('./sw.js?v=4.6').then(reg => {
