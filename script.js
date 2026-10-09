@@ -237,6 +237,7 @@ function sanitizePosition(pos, cat, idx) {
   }
   if (!pos.hardQty || typeof pos.hardQty !== 'object') pos.hardQty = {};
   if (!pos.hardSum || typeof pos.hardSum !== 'object') pos.hardSum = {};
+  if (pos.glassManual === undefined) pos.glassManual = '';
   if (pos.instOn === undefined) pos.instOn = true;
   if (!pos.instMode) pos.instMode = 'fix';
   if (pos.instFix === undefined) pos.instFix = (D.misc && D.misc.instFix) ? D.misc.instFix : 35000;
@@ -397,6 +398,7 @@ function syncCurrentInputsToState() {
     document.querySelectorAll('.hardQty').forEach(inp => { item.hardQty[inp.dataset.idx] = inp.value; });
     item.hardSum = {};
     document.querySelectorAll('.hardSum').forEach(inp => { item.hardSum[inp.dataset.idx] = inp.value; });
+    item.glassManual = el('glassManual') ? el('glassManual').value : '';
     item.railSelect = el('railSelect') ? el('railSelect').value : 'Без поручня';
     item.railLength = el('railLength') ? el('railLength').value : '';
     item.railManual = el('railManual') ? el('railManual').value : '';
@@ -408,6 +410,7 @@ function syncCurrentInputsToState() {
     document.querySelectorAll('.hardQty').forEach(inp => { item.hardQty[inp.dataset.idx] = inp.value; });
     item.hardSum = {};
     document.querySelectorAll('.hardSum').forEach(inp => { item.hardSum[inp.dataset.idx] = inp.value; });
+    item.glassManual = el('glassManual') ? el('glassManual').value : '';
     item.railSelect = el('railSelect') ? el('railSelect').value : 'Без поручня';
     item.railLength = el('railLength') ? el('railLength').value : '';
     item.railManual = el('railManual') ? el('railManual').value : '';
@@ -419,6 +422,7 @@ function syncCurrentInputsToState() {
     document.querySelectorAll('.hardQty').forEach(inp => { item.hardQty[inp.dataset.idx] = inp.value; });
     item.hardSum = {};
     document.querySelectorAll('.hardSum').forEach(inp => { item.hardSum[inp.dataset.idx] = inp.value; });
+    item.glassManual = el('glassManual') ? el('glassManual').value : '';
   } else if (cat === 'loft') {
     item.area = el('loftArea') ? el('loftArea').value : '';
     item.profileLen = el('loftProfileLen') ? el('loftProfileLen').value : '';
@@ -428,6 +432,7 @@ function syncCurrentInputsToState() {
     document.querySelectorAll('.hardQty').forEach(inp => { item.hardQty[inp.dataset.idx] = inp.value; });
     item.hardSum = {};
     document.querySelectorAll('.hardSum').forEach(inp => { item.hardSum[inp.dataset.idx] = inp.value; });
+    item.glassManual = el('glassManual') ? el('glassManual').value : '';
   }
 
   // Installation per item
@@ -481,6 +486,7 @@ function loadStateToInputs() {
   document.querySelectorAll('.hardSum').forEach(inp => {
     inp.value = (item.hardSum && item.hardSum[inp.dataset.idx]) || '';
   });
+  if (el('glassManual')) el('glassManual').value = item.glassManual || '';
 
   // Installation per item
   if (el('posInstOn')) el('posInstOn').checked = item.instOn !== false;
@@ -787,6 +793,10 @@ function renderCategoryContent() {
             <div class="hint" id="glassHint" style="margin-top:2px;"></div>
           </div>
         </div>
+
+        <div class="grid" style="margin-top:12px">
+          <div class="field"><label>Итоговая сумма стекла (можно вручную)</label><div class="input-wrap"><input type="number" id="glassManual" value="${curPos.glassManual || ''}" placeholder="авто" min="0" step="100" oninput="calc()"><span class="unit">₽</span></div><div class="hint">Пусто — считаем автоматически (авто сейчас: <b><span id="glassAutoSum">—</span></b>)</div></div>
+        </div>
       </section>
 
       <!-- Step 2: Расчёт стекла -->
@@ -884,6 +894,10 @@ function renderCategoryContent() {
             <div class="hint" id="glassHint" style="margin-top:2px;"></div>
           </div>
         </div>
+
+        <div class="grid" style="margin-top:12px">
+          <div class="field"><label>Итоговая сумма стекла (можно вручную)</label><div class="input-wrap"><input type="number" id="glassManual" value="${curPos.glassManual || ''}" placeholder="авто" min="0" step="100" oninput="calc()"><span class="unit">₽</span></div><div class="hint">Пусто — считаем автоматически (авто сейчас: <b><span id="glassAutoSum">—</span></b>)</div></div>
+        </div>
       </section>
 
       <!-- Step 2: Фурнитура -->
@@ -954,6 +968,10 @@ function renderCategoryContent() {
             <div class="hint" id="glassHint" style="margin-top:2px;"></div>
           </div>
         </div>
+
+        <div class="grid" style="margin-top:12px">
+          <div class="field"><label>Итоговая сумма стекла (можно вручную)</label><div class="input-wrap"><input type="number" id="glassManual" value="${curPos.glassManual || ''}" placeholder="авто" min="0" step="100" oninput="calc()"><span class="unit">₽</span></div><div class="hint">Пусто — считаем автоматически (авто сейчас: <b><span id="glassAutoSum">—</span></b>)</div></div>
+        </div>
       </section>
 
       <!-- Step 3: Душевая фурнитура -->
@@ -1016,6 +1034,10 @@ function renderCategoryContent() {
             <div style="font-weight:700;font-size:13.5px;" id="glassSwatchTitle">Закаленное 6 мм</div>
             <div class="hint" id="glassHint" style="margin-top:2px;"></div>
           </div>
+        </div>
+
+        <div class="grid" style="margin-top:12px">
+          <div class="field"><label>Итоговая сумма стекла (можно вручную)</label><div class="input-wrap"><input type="number" id="glassManual" value="${curPos.glassManual || ''}" placeholder="авто" min="0" step="100" oninput="calc()"><span class="unit">₽</span></div><div class="hint">Пусто — считаем автоматически (авто сейчас: <b><span id="glassAutoSum">—</span></b>)</div></div>
         </div>
       </section>
 
@@ -1247,6 +1269,13 @@ function calculateCategoryData(cat) {
       glassSum = roundUp500(raw * mult);
     }
 
+    // Ручная итоговая сумма стекла (если заполнена — побеждает авто-расчёт)
+    const glassAuto = glassSum;
+    if (pos.glassManual !== undefined && String(pos.glassManual).trim() !== '') {
+      const gMan = parseFloat(String(pos.glassManual).replace(',', '.')) || 0;
+      if (gMan > 0) glassSum = roundUp500(gMan * mult);
+    }
+
     // Hardware
     let hardSum = 0;
     const hardParts = [];
@@ -1311,6 +1340,7 @@ function calculateCategoryData(cat) {
       cat,
       glassName,
       glassSum,
+      glassAuto,
       parts: hardParts,
       hardTotal,
       hasRail,
@@ -1368,6 +1398,11 @@ function calc() {
   const resBalconies = calculateCategoryData('balconies');
   const resShowers = calculateCategoryData('showers');
   const resLoft = calculateCategoryData('loft');
+
+  // Live-подсказка авто-суммы стекла для активной позиции
+  const resMap = { railings: resRailings, balconies: resBalconies, showers: resShowers, loft: resLoft };
+  const curCPglass = (resMap[curCat] && resMap[curCat].calcPositions && resMap[curCat].calcPositions[curPIdx]) || null;
+  if (el('glassAutoSum')) el('glassAutoSum').textContent = curCPglass ? fmt(curCPglass.glassAuto) + ' ₽' : '—';
 
   const allCategoriesTotal = resRailings.categoryTotal + resBalconies.categoryTotal + resShowers.categoryTotal + resLoft.categoryTotal;
   const mult = getPriceMultiplier();
@@ -3107,8 +3142,8 @@ function saveAll() {
   saveCurrentToHistory(true);
 }
 
-const APP_VERSION = 'v5.7.101026';
-const APP_BUILD_NUM = '#66';
+const APP_VERSION = 'v5.8.101026';
+const APP_BUILD_NUM = '#67';
 const APP_BUILD_DATE = '10.10.2026';
 
 function updateVersionBadge() {
