@@ -106,7 +106,7 @@ const DEF = {
     { name: "Изготовление схемы", emptyDefault: "hide" },
     { name: "Порошковая окраска фурнитуры по RAL", emptyDefault: "hide" }
   ],
-  misc: { delivery: 7500, instFix: 35000, instPct: 30, termGlass: 21, termTripl: 25, pin: '0120' }
+  misc: { delivery: 7500, instFix: 35000, instPct: 30, termGlass: 21, termTripl: 25, pin: '0120', vatMode: 'none' }
 };
 
 let D = JSON.parse(JSON.stringify(DEF));
@@ -129,6 +129,7 @@ function loadSavedConfig() {
 loadSavedConfig();
 
 if (!D.misc.pin) D.misc.pin = '0120';
+if (!D.misc.vatMode) D.misc.vatMode = 'none';
 
 let termManual = false;
 
@@ -1528,7 +1529,7 @@ function calc() {
   t += `${counter++}. Доставка, разгрузка — ${el('delOn').checked ? (delSum > 0 ? rub(delSum) : '0 ₽') : 'не требуется'}\n`;
   servLines.forEach(line => { t += `${counter++}. ${line}\n`; });
 
-  t += `\nИтого общая стоимость — ${fmt(total)} рублей.\n`;
+  t += `\nИтого общая стоимость (${getVatText()}) — ${fmt(total)} рублей.\n`;
   t += `Срок изготовления — ${finalDays} рабочих дней.`;
 
   el('quoteText').textContent = t;
@@ -3186,8 +3187,32 @@ function saveAll() {
   saveCurrentToHistory(true);
 }
 
-const APP_VERSION = 'v5.10.111026';
-const APP_BUILD_NUM = '#69';
+/* ── НДС: ручной переключатель подписи итоговой цены ─────────────────────
+   ВАЖНО: на сумму НЕ влияет — меняется только текст рядом с итоговой ценой */
+function getVatText() {
+  return (D.misc && D.misc.vatMode === 'incl') ? 'в т.ч. НДС' : 'без НДС';
+}
+
+function updateVatUi() {
+  const mode = (D.misc && D.misc.vatMode === 'incl') ? 'incl' : 'none';
+  const txt = getVatText();
+  const tNone = el('vatTabNone'), tIncl = el('vatTabIncl');
+  if (tNone) tNone.classList.toggle('active', mode === 'none');
+  if (tIncl) tIncl.classList.toggle('active', mode === 'incl');
+  if (el('sumLabel')) el('sumLabel').textContent = 'Итоговая стоимость заказа (' + txt + ')';
+  if (el('kpVatLabel')) el('kpVatLabel').textContent = 'Итого общая стоимость (' + txt + ')';
+  if (el('floatingVatNote')) el('floatingVatNote').textContent = txt;
+}
+
+function setVatMode(mode) {
+  if (!D.misc) D.misc = {};
+  D.misc.vatMode = (mode === 'incl') ? 'incl' : 'none';
+  updateVatUi();
+  autoSave(); // запоминаем выбор (пересчёт суммы не требуется — это только подпись)
+}
+
+const APP_VERSION = 'v5.11.111026';
+const APP_BUILD_NUM = '#70';
 const APP_BUILD_DATE = '11.10.2026';
 
 // Самолечение приложения: если на сервере новее сборка — чистим кэш и перезагружаемся автоматически
@@ -3954,6 +3979,7 @@ function init() {
   buildServiceList();
   updateHistoryBadge();
   updateVersionBadge();
+  updateVatUi();
   renderHistoryList();
   if (el('delPrice')) el('delPrice').value = D.misc.delivery;
   calc();

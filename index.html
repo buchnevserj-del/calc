@@ -7,10 +7,10 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>GlassLoft — Калькулятор стеклянных конструкций</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg?v=5.10">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=5.10">
-<link rel="apple-touch-icon" href="icon-192.png?v=5.10">
-<link rel="manifest" href="manifest.json?v=5.10">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=5.11">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=5.11">
+<link rel="apple-touch-icon" href="icon-192.png?v=5.11">
+<link rel="manifest" href="manifest.json?v=5.11">
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5.10">
+<link rel="stylesheet" href="style.css?v=5.11">
 </head>
 <body>
 <div class="wrap">
@@ -191,8 +191,12 @@
 
         <!-- Big Hero Price Display -->
         <div class="sum-display">
-          <div class="sum-label">Итоговая стоимость заказа</div>
+          <div class="sum-label" id="sumLabel">Итоговая стоимость заказа (без НДС)</div>
           <div class="sum" id="sum">0 ₽</div>
+          <div class="vat-segmented" title="Меняется только подпись — сумма остаётся прежней">
+            <button type="button" class="vat-tab active" id="vatTabNone" onclick="setVatMode('none')">Без НДС</button>
+            <button type="button" class="vat-tab" id="vatTabIncl" onclick="setVatMode('incl')">в т.ч. НДС</button>
+          </div>
         </div>
 
         <!-- Discount & Markup Adjuster -->
@@ -282,6 +286,7 @@
   <div class="floating-sum-group">
     <span class="floating-sum-label">Итого:</span>
     <span class="floating-sum" id="floatingSum">0 ₽</span>
+    <span class="floating-vat-note" id="floatingVatNote">без НДС</span>
   </div>
   <div class="floating-actions">
     <button class="btn btn-float-history" onclick="openModal('historyModal')" title="История расчётов">
@@ -748,7 +753,7 @@
           <div class="kp-info-val" id="kpDocPrepay">50%</div>
         </div>
         <div class="kp-total-card">
-          <div class="kp-total-label">Итого общая стоимость (без НДС)</div>
+          <div class="kp-total-label" id="kpVatLabel">Итого общая стоимость (без НДС)</div>
           <div class="kp-total-val" id="kpDocTotal">0 ₽</div>
         </div>
       </div>
@@ -780,6 +785,6 @@
 
 <script src="html2canvas.min.js"></script>
 <script src="jspdf.umd.min.js"></script>
-<script src="script.js?v=5.10"></script>
+<script src="script.js?v=5.11"></script>
 </body>
 </html>

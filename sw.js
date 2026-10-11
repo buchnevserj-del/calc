@@ -1,4 +1,4 @@
-const CACHE_NAME = 'glassloft-v5.10';
+const CACHE_NAME = 'glassloft-v5.11';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

@@ -2550,3 +2550,42 @@ input:checked + .slider:before {
     color: #000;
   }
 }
+
+/* ── Переключатель НДС в карточке ИТОГО (только подпись, сумма не меняется) ── */
+.vat-segmented {
+  display: inline-flex;
+  background: #ffffff;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 4px;
+  margin-top: 12px;
+}
+.vat-tab {
+  border: 0;
+  background: transparent;
+  padding: 7px 18px;
+  font: 700 12.5px 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.vat-tab:hover {
+  color: var(--text);
+  background: var(--card-sub-alt);
+}
+.vat-tab.active {
+  background: #0f172a;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+}
+.floating-vat-note {
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.6;
+  align-self: center;
+  margin-left: 2px;
+  white-space: nowrap;
+}
