@@ -245,9 +245,25 @@ function sanitizePosition(pos, cat, idx) {
   return pos;
 }
 
+const APP_STATE_KEY = 'glassloft_app_state_v6';
+// Одноразовый флаг полного сброса: выставляется кнопкой «Обновить» ПЕРЕД перезагрузкой.
+// Если флаг есть — init() НЕ восстанавливает черновик, даже если он успел где-то пересохраниться.
+const FORCE_RESET_KEY = 'glassloft_force_reset_v1';
+
+function consumeForceResetFlag() {
+  try {
+    if (localStorage.getItem(FORCE_RESET_KEY)) {
+      localStorage.removeItem(FORCE_RESET_KEY);
+      localStorage.removeItem(APP_STATE_KEY);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
 function loadSavedAppState() {
   try {
-    const saved = localStorage.getItem('glassloft_app_state_v6');
+    const saved = localStorage.getItem(APP_STATE_KEY);
     if (saved) {
       const p = JSON.parse(saved);
       if (p && typeof p === 'object') {
@@ -263,7 +279,7 @@ function loadSavedAppState() {
 
 function saveAppState() {
   try {
-    localStorage.setItem('glassloft_app_state_v6', JSON.stringify(appState));
+    localStorage.setItem(APP_STATE_KEY, JSON.stringify(appState));
   } catch(e) {}
 }
 
@@ -2988,8 +3004,35 @@ function renderServiceSettings() {
 }
 
 function resetCalculatorToZero() {
-  localStorage.removeItem('glassloft_app_state_v6');
+  /* ══ ЭТАП 1 — ГАРАНТИРОВАННЫЙ ══════════════════════════════════════
+     Выполняется ПЕРВЫМ, до любого «тяжёлого» кода. Даже если что-то
+     ниже упадёт с ошибкой — флаг стоит и перезагрузка уже запланирована. */
 
+  // 1.1 Флаг полного сброса: после перезагрузки init() НЕ восстановит черновик
+  try { localStorage.setItem(FORCE_RESET_KEY, String(Date.now())); } catch(e) {}
+  // 1.2 Сразу удаляем сохранённый черновик расчёта
+  try { localStorage.removeItem(APP_STATE_KEY); } catch(e) {}
+
+  // 1.3 Жёсткая перезагрузка страницы С ОБХОДОМ КЭША (?r=). Таймер поставлен
+  // раньше любых операций с DOM — он сработает даже при сбое ниже.
+  setTimeout(() => {
+    try { location.replace(location.pathname + '?r=' + Date.now()); }
+    catch(e) { try { location.reload(); } catch(e2) {} }
+  }, 500);
+
+  // 1.4 Чистка кэшей браузера в фоне (результата не ждём)
+  setTimeout(() => {
+    try {
+      if ('caches' in window) {
+        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
+      }
+    } catch(e) {}
+  }, 0);
+
+  /* ══ ЭТАП 2 — МЯГКАЯ ОЧИСТКА ИНТЕРФЕЙСА ════════════════════════════
+     Если здесь что-то упадёт — не страшно: таймер этапа 1 всё равно
+     перезагрузит страницу, а флаг не даст восстановить старые данные. */
+  try {
   appState = {
     railings: [
       {
@@ -3038,11 +3081,13 @@ function resetCalculatorToZero() {
   activePosIdx = { railings: 0, balconies: 0, showers: 0, loft: 0 };
   activeCategory = 'railings';
 
-  if (el('calcClient')) el('calcClient').value = 'Частное лицо';
+    if (el('calcClient')) el('calcClient').value = 'Частное лицо';
   if (el('calcPhone')) el('calcPhone').value = '';
   if (el('calcAddress')) el('calcAddress').value = 'г. Санкт-Петербург';
 
-  setAdjMode('none');
+  // ВАЖНО: skipCalc=true — DOM ещё содержит старые значения,
+  // преждевременный calc() затянул бы их обратно в appState (причина «воскрешения» данных)
+  setAdjMode('none', true);
 
   if (el('delPrice')) el('delPrice').value = D.misc.delivery || 7500;
   if (el('delOn')) el('delOn').checked = true;
@@ -3054,26 +3099,23 @@ function resetCalculatorToZero() {
   activeEditingHistoryId = null;
   if (el('editModeBanner')) el('editModeBanner').style.display = 'none';
 
-  saveAppState();
-
   document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
   if (el('tabCatRailings')) el('tabCatRailings').classList.add('active');
 
+  // Сначала перерисовываем DOM из чистого состояния...
   renderCategoryContent();
   renderPositionTabs();
   loadStateToInputs();
+  // ...потом пересчитываем (calc синхронизирует уже ЧИСТЫЙ DOM обратно в appState)
   calc();
-
-  // Clear cache in background
-  try {
-    if ('caches' in window) {
-      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
-    }
-  } catch(e) {}
+  // ...и только теперь сохраняем черновик — гарантированно пустой
+  saveAppState();
 
   showToast('Все расчёты и поля сброшены до нуля! 🔄');
-  // Перезагрузка — гарантированно показывает чистую страницу, сбрасывая любые битые состояния DOM
-  setTimeout(() => { try { location.reload(); } catch(e) {} }, 600);
+  } catch(e) {
+    console.error('GlassLoft: мягкая очистка интерфейса не завершена — страница будет перезагружена по таймеру', e);
+  }
+  // Перезагрузка произойдёт по таймеру из ЭТАПА 1 (см. начало функции)
 }
 
 function delGlass(name) {
@@ -3144,11 +3186,36 @@ function saveAll() {
   saveCurrentToHistory(true);
 }
 
-const APP_VERSION = 'v5.9.111026';
-const APP_BUILD_NUM = '#68';
+const APP_VERSION = 'v5.10.111026';
+const APP_BUILD_NUM = '#69';
 const APP_BUILD_DATE = '11.10.2026';
 
 // Самолечение приложения: если на сервере новее сборка — чистим кэш и перезагружаемся автоматически
+/* Автообновление приложения: как только браузер активировал новый Service Worker,
+   мгновенно перезагружаем открытую страницу — пользователь всегда в свежей версии. */
+let _swReloadArmed = false;
+function setupServiceWorkerAutoUpdate() {
+  try {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (_swReloadArmed) return;
+      _swReloadArmed = true;
+      try { location.reload(); } catch(e) {}
+    });
+    const ping = () => {
+      try {
+        navigator.serviceWorker.getRegistration().then(reg => { if (reg) reg.update(); });
+      } catch(e) {}
+    };
+    try { setInterval(ping, 5 * 60 * 1000); } catch(e) {}
+    try {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') ping();
+      });
+    } catch(e) {}
+  } catch(e) {}
+}
+
 async function checkAppVersionHealth() {
   try {
     const res = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
@@ -3179,27 +3246,29 @@ function updateVersionBadge() {
   }
 }
 
-async function forceAppUpdate() {
-  showToast('Сброс кэша и загрузка последней версии... ⏳');
-  try {
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      for (const reg of regs) {
-        await reg.unregister();
-      }
-    }
-  } catch(e) {}
+function forceAppUpdate() {
+  try { showToast('Сброс кэша и загрузка последней версии... ⏳'); } catch(e) {}
+
+  // Переход на свежую версию ГАРАНТИРОВАН этим таймером — даже если очистка ниже зависнет
   setTimeout(() => {
-    const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
-    let path = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '';
-    path = path.replace(/\/index\.html$/i, '').replace(/index\.html$/i, '').replace(/\/+$/, '');
-    const cleanUrl = origin + (path ? path : '') + '/';
-    window.location.href = cleanUrl + '?ts=' + Date.now();
-  }, 250);
+    try {
+      let path = location.pathname || '/';
+      path = path.replace(/index\.html$/i, '').replace(/\/+$/, '');
+      location.replace((path || '') + '/?ts=' + Date.now());
+    } catch(e) { try { location.reload(); } catch(e2) {} }
+  }, 400);
+
+  // Очистка кэшей и Service Worker — в фоне, не блокирует навигацию
+  try {
+    const jobs = [];
+    if ('caches' in window) {
+      jobs.push(caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))));
+    }
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      jobs.push(navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(r => r.unregister()))));
+    }
+    Promise.all(jobs).catch(() => {});
+  } catch(e) {}
 }
 
 
@@ -3867,9 +3936,17 @@ window.addEventListener('error', function (e) {
 
 /* --- Init --- */
 function init() {
+  // Если при открытой странице активировался новый Service Worker — мгновенно обновляемся
+  setupServiceWorkerAutoUpdate();
+
+  // Одноразовый флаг полного сброса (кнопка «Обновить»): черновик НЕ восстанавливаем
+  const wasForceReset = consumeForceResetFlag();
+
   checkDealerMode();
   loadSavedConfig();
-  loadSavedAppState();
+  if (!wasForceReset) {
+    loadSavedAppState();
+  }
   seedInitialHistoryIfEmpty();
   migrateHistoryDemoItems();
   renderCategoryContent();
@@ -3889,6 +3966,11 @@ function init() {
     navigator.serviceWorker.register('./sw.js?v=4.6').then(reg => {
       reg.update();
     }).catch(() => {});
+  }
+
+  // Подтверждение полного сброса после перезагрузки страницы
+  if (wasForceReset) {
+    setTimeout(() => { try { showToast('Смета очищена до нуля ✅'); } catch(e) {} }, 800);
   }
 }
 
